@@ -59,7 +59,7 @@ def lint_imports(
         if exclude_folders:
             folder_info.append(f"excluding folders: {', '.join(exclude_folders)}")
         output.print(f"Folder filtering active ({'; '.join(folder_info)})")
-    
+
     output.verbose_print(verbose, "Verbose mode.")
     try:
         user_options = read_user_options(config_filename=config_filename)
@@ -205,7 +205,7 @@ def _build_report(
     report = Report(
         graph=graph, show_timings=show_timings, graph_building_duration=graph_building_duration
     )
-    
+
     # Note: Folder filtering is currently available only in the pylint plugin
     # CLI folder filtering will be implemented in a future version
     if target_folders or exclude_folders:
@@ -213,7 +213,7 @@ def _build_report(
             verbose,
             "Note: Folder filtering is currently supported only in the pylint plugin"
         )
-    
+
     contracts_options = _filter_contract_options(
         user_options.contracts_options, limit_to_contracts
     )

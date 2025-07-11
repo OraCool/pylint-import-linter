@@ -57,15 +57,15 @@ def format_violation_message(contract_name: str, message_id: str, folder_info: s
                              violation_details: str = "") -> str:
     """
     Generate a standardized violation message for both CLI and pylint plugin.
-    
+
     This ensures consistent messaging across all import-linter tools.
-    
+
     Args:
         contract_name: The name of the violated contract
         message_id: The specific violation type (import-boundary-violation, etc.)
         folder_info: Optional folder targeting information
         violation_details: Specific details about the violation (e.g., import path)
-        
+
     Returns:
         A formatted violation message string
     """
@@ -77,29 +77,29 @@ def format_violation_message(contract_name: str, message_id: str, folder_info: s
         ),
         IMPORT_CONTRACT_VIOLATION: f"Contract validation failed for '{contract_name}' rule",
     }
-    
+
     base_msg = base_messages.get(
         message_id, f"Contract validation failed for '{contract_name}' rule"
     )
-    
+
     # Add specific violation details if provided
     if violation_details:
         base_msg += f": {violation_details}"
-    
+
     # Add folder information if provided
     if folder_info:
         base_msg += folder_info
-    
+
     return f"{base_msg}. Run 'lint-imports --verbose' for details."
 
 
 def get_message_id_for_contract_type(contract_type: str) -> str:
     """
     Get the appropriate message ID for a given contract type.
-    
+
     Args:
         contract_type: The contract class name (e.g., "ForbiddenContract")
-        
+
     Returns:
         The corresponding message ID
     """

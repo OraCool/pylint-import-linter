@@ -79,11 +79,11 @@ def lint_imports_command(
     target_folders_list = []
     if target_folders:
         target_folders_list = [f.strip() for f in target_folders.split(",")]
-    
+
     exclude_folders_list = []
     if exclude_folders:
         exclude_folders_list = [f.strip() for f in exclude_folders.split(",")]
-    
+
     exit_code = lint_imports(
         config_filename=config,
         limit_to_contracts=contract,
@@ -154,11 +154,11 @@ def lint_imports(
         from importlinter.application.use_cases import (
             read_user_options, create_report, _register_contract_types
         )
-        
+
         try:
             user_options = read_user_options(config_filename=config_filename)
             _register_contract_types(user_options)
-            
+
             report = create_report(
                 user_options=user_options,
                 limit_to_contracts=limit_to_contracts,
@@ -168,16 +168,16 @@ def lint_imports(
                 show_timings=show_timings,
                 verbose=verbose,
             )
-            
+
             # Output JSON format
             if output_format.lower() == "json2":
                 json_output = format_report_as_json2(report, folder_info)
             else:  # json
                 json_output = format_report_as_json(report, folder_info)
             click.echo(json_output)
-            
+
             return EXIT_STATUS_SUCCESS if not report.contains_failures else EXIT_STATUS_ERROR
-            
+
         except Exception as e:
             if is_debug_mode:
                 raise
@@ -233,7 +233,7 @@ def lint_imports(
             show_timings=show_timings,
             verbose=verbose,
         )
-        
+
         return EXIT_STATUS_SUCCESS if passed else EXIT_STATUS_ERROR
 
 
