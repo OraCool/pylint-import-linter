@@ -14,47 +14,21 @@ from pylint.lint import PyLinter
 
 from importlinter.application.sentinels import NotSupplied
 from importlinter.configuration import configure
+from importlinter.application.constants import (
+    IMPORT_BOUNDARY_VIOLATION,
+    IMPORT_LAYER_VIOLATION,
+    IMPORT_INDEPENDENCE_VIOLATION,
+    IMPORT_CONTRACT_ERROR,
+    CONTRACT_TYPE_TO_MESSAGE_ID,
+    DEFAULT_CONTRACT_MESSAGE_ID,
+    MESSAGES,
+)
 
 if TYPE_CHECKING:
     from astroid import nodes
 
 # Configure import-linter
 configure()
-
-# Plugin message definitions
-IMPORT_BOUNDARY_VIOLATION = "import-boundary-violation"
-IMPORT_LAYER_VIOLATION = "import-layer-violation"
-IMPORT_INDEPENDENCE_VIOLATION = "import-independence-violation"
-IMPORT_CONTRACT_VIOLATION = "import-contract-violation"
-IMPORT_CONTRACT_ERROR = "import-contract-error"
-
-MESSAGES = {
-    "E9001": (
-        "Import contract violation: %s",
-        IMPORT_CONTRACT_VIOLATION,
-        "Import violates architecture contract defined in .importlinter configuration",
-    ),
-    "E9002": (
-        "Import contract error: %s",
-        IMPORT_CONTRACT_ERROR,
-        "Error occurred while checking import contracts",
-    ),
-    "E9003": (
-        "Domain boundary violation: %s",
-        IMPORT_BOUNDARY_VIOLATION,
-        "Import violates domain boundaries (forbidden contract)",
-    ),
-    "E9004": (
-        "Layer violation: %s",
-        IMPORT_LAYER_VIOLATION,
-        "Import violates layer architecture (layers contract)",
-    ),
-    "E9005": (
-        "Independence violation: %s",
-        IMPORT_INDEPENDENCE_VIOLATION,
-        "Import violates module independence (independence contract)",
-    ),
-}
 
 
 class ImportLinterChecker(checkers.BaseChecker):
@@ -226,35 +200,25 @@ class ImportLinterChecker(checkers.BaseChecker):
                         contract_type = contract.__class__.__name__
                         contract_name = contract.name
                         
-                        if "ForbiddenContract" in contract_type:
+                        # Use the mapping to get the appropriate message ID
+                        message_id = CONTRACT_TYPE_TO_MESSAGE_ID.get(
+                            contract_type, DEFAULT_CONTRACT_MESSAGE_ID
+                        )
+                        
+                        if message_id == IMPORT_BOUNDARY_VIOLATION:
                             violation_msg = (
                                 f"Forbidden import detected in '{contract_name}'"
                                 f"{folder_msg}. Run 'lint-imports --verbose' for details."
                             )
-                            self.add_message(
-                                IMPORT_BOUNDARY_VIOLATION,
-                                args=(violation_msg,),
-                                node=node_for_message,
-                            )
-                        elif "LayersContract" in contract_type:
+                        elif message_id == IMPORT_LAYER_VIOLATION:
                             violation_msg = (
                                 f"Layer boundary violated in '{contract_name}'"
                                 f"{folder_msg}. Run 'lint-imports --verbose' for details."
                             )
-                            self.add_message(
-                                IMPORT_LAYER_VIOLATION,
-                                args=(violation_msg,),
-                                node=node_for_message,
-                            )
-                        elif "IndependenceContract" in contract_type:
+                        elif message_id == IMPORT_INDEPENDENCE_VIOLATION:
                             violation_msg = (
                                 f"Module independence violated in '{contract_name}'"
                                 f"{folder_msg}. Run 'lint-imports --verbose' for details."
-                            )
-                            self.add_message(
-                                IMPORT_INDEPENDENCE_VIOLATION,
-                                args=(violation_msg,),
-                                node=node_for_message,
                             )
                         else:
                             # Fallback to generic contract violation
@@ -262,11 +226,12 @@ class ImportLinterChecker(checkers.BaseChecker):
                                 f"Contract validation failed for '{contract_name}'"
                                 f"{folder_msg}. Run 'lint-imports --verbose' for details."
                             )
-                            self.add_message(
-                                IMPORT_CONTRACT_VIOLATION,
-                                args=(violation_msg,),
-                                node=node_for_message,
-                            )
+                        
+                        self.add_message(
+                            message_id,
+                            args=(violation_msg,),
+                            node=node_for_message,
+                        )
 
         except (ImportError, FileNotFoundError, ValueError) as e:
             # Handle any errors in contract checking
