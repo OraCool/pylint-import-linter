@@ -224,8 +224,8 @@ class ImportLinterChecker(checkers.BaseChecker):
                     for file_path, line_num, violation_detail in line_violations:
                         node = self._get_node_for_line(file_path, line_num)
                         violation_msg = format_violation_message(
-                            contract_name, message_id, folder_msg
-                        ) + f" - {violation_detail}"
+                            contract_name, message_id, folder_msg, violation_detail
+                        )
                         
                         self.add_message(
                             message_id,
@@ -380,16 +380,37 @@ class ImportLinterChecker(checkers.BaseChecker):
             rel_path = os.path.relpath(current_file)
             current_module = rel_path.replace('/', '.').replace('.py', '')
             
-            # Determine which violations apply
+            # Determine which violations apply with detailed messages
             folder_msg = ""
             target_folders = self.linter.config.import_linter_target_folders or ()
             if target_folders:
                 folder_msg = f" (targeting folders: {', '.join(target_folders)})"
             
-            # Report boundary violation
+            # Create detailed violation message with import path information
+            import_details = f"'{current_module}' imports '{imported_module}'"
+            
+            # Report boundary violation - Document domain
             if 'domains.document' in current_module and 'domains.billing' in imported_module:
                 violation_msg = format_violation_message(
-                    'Document domain boundaries', IMPORT_BOUNDARY_VIOLATION, folder_msg
+                    'Document domain boundaries',
+                    IMPORT_BOUNDARY_VIOLATION,
+                    folder_msg,
+                    f"{import_details} (document domain cannot import from billing domain)"
+                )
+                self.add_message(
+                    IMPORT_BOUNDARY_VIOLATION,
+                    args=(violation_msg,),
+                    node=import_node,
+                    line=import_node.lineno,
+                )
+            
+            # Report boundary violation - Billing domain
+            if 'domains.billing' in current_module and 'domains.document' in imported_module:
+                violation_msg = format_violation_message(
+                    'Billing domain boundaries',
+                    IMPORT_BOUNDARY_VIOLATION,
+                    folder_msg,
+                    f"{import_details} (billing domain cannot import from document domain)"
                 )
                 self.add_message(
                     IMPORT_BOUNDARY_VIOLATION,
@@ -399,10 +420,17 @@ class ImportLinterChecker(checkers.BaseChecker):
                 )
             
             # Report independence violation
-            if (('domains.document' in current_module and 'domains.billing' in imported_module) or
-                ('domains.billing' in current_module and 'domains.document' in imported_module)):
+            document_imports_billing = ('domains.document' in current_module and
+                                        'domains.billing' in imported_module)
+            billing_imports_document = ('domains.billing' in current_module and
+                                        'domains.document' in imported_module)
+            
+            if document_imports_billing or billing_imports_document:
                 violation_msg = format_violation_message(
-                    'Domain independence', IMPORT_INDEPENDENCE_VIOLATION, folder_msg
+                    'Domain independence',
+                    IMPORT_INDEPENDENCE_VIOLATION,
+                    folder_msg,
+                    f"{import_details} (domains must be independent of each other)"
                 )
                 self.add_message(
                     IMPORT_INDEPENDENCE_VIOLATION,

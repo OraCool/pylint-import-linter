@@ -38,22 +38,23 @@ MESSAGES = {
     "E9003": (
         "Domain boundary violation: %s",
         IMPORT_BOUNDARY_VIOLATION,
-        "Import violates domain boundaries (forbidden contract)",
+        "Import violates domain boundaries defined by forbidden contract rules",
     ),
     "E9004": (
         "Layer violation: %s",
         IMPORT_LAYER_VIOLATION,
-        "Import violates layer architecture (layers contract)",
+        "Import violates layer architecture defined by layers contract rules",
     ),
     "E9005": (
         "Independence violation: %s",
         IMPORT_INDEPENDENCE_VIOLATION,
-        "Import violates module independence (independence contract)",
+        "Import violates module independence defined by independence contract rules",
     ),
 }
 
 
-def format_violation_message(contract_name: str, message_id: str, folder_info: str = "") -> str:
+def format_violation_message(contract_name: str, message_id: str, folder_info: str = "",
+                             violation_details: str = "") -> str:
     """
     Generate a standardized violation message for both CLI and pylint plugin.
     
@@ -63,19 +64,33 @@ def format_violation_message(contract_name: str, message_id: str, folder_info: s
         contract_name: The name of the violated contract
         message_id: The specific violation type (import-boundary-violation, etc.)
         folder_info: Optional folder targeting information
+        violation_details: Specific details about the violation (e.g., import path)
         
     Returns:
         A formatted violation message string
     """
     base_messages = {
-        IMPORT_BOUNDARY_VIOLATION: f"Forbidden import detected in '{contract_name}'",
-        IMPORT_LAYER_VIOLATION: f"Layer boundary violated in '{contract_name}'",
-        IMPORT_INDEPENDENCE_VIOLATION: f"Module independence violated in '{contract_name}'",
-        IMPORT_CONTRACT_VIOLATION: f"Contract validation failed for '{contract_name}'",
+        IMPORT_BOUNDARY_VIOLATION: f"Forbidden import detected - violates '{contract_name}' rule",
+        IMPORT_LAYER_VIOLATION: f"Layer boundary violated - violates '{contract_name}' rule",
+        IMPORT_INDEPENDENCE_VIOLATION: (
+            f"Module independence violated - violates '{contract_name}' rule"
+        ),
+        IMPORT_CONTRACT_VIOLATION: f"Contract validation failed for '{contract_name}' rule",
     }
     
-    base_msg = base_messages.get(message_id, f"Contract validation failed for '{contract_name}'")
-    return f"{base_msg}{folder_info}. Run 'lint-imports --verbose' for details."
+    base_msg = base_messages.get(
+        message_id, f"Contract validation failed for '{contract_name}' rule"
+    )
+    
+    # Add specific violation details if provided
+    if violation_details:
+        base_msg += f": {violation_details}"
+    
+    # Add folder information if provided
+    if folder_info:
+        base_msg += folder_info
+    
+    return f"{base_msg}. Run 'lint-imports --verbose' for details."
 
 
 def get_message_id_for_contract_type(contract_type: str) -> str:
