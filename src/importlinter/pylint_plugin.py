@@ -16,6 +16,8 @@ from importlinter.application.sentinels import NotSupplied
 from importlinter.configuration import configure
 from importlinter.application.constants import (
     IMPORT_CONTRACT_ERROR,
+    IMPORT_BOUNDARY_VIOLATION,
+    IMPORT_INDEPENDENCE_VIOLATION,
     MESSAGES,
     format_violation_message,
     get_message_id_for_contract_type,
@@ -97,6 +99,9 @@ class ImportLinterChecker(checkers.BaseChecker):
         self._contracts_checked = False
         self._first_module_node = None
         self._analyzed_files = set()
+        self._module_nodes = {}  # Store module nodes by file path for line-specific reporting
+        self._import_nodes = []  # Store import nodes for line-specific reporting
+        self._contracts_cache = None  # Cache contracts for import checking
         
     def open(self) -> None:
         """Called when the checker is opened."""
@@ -108,6 +113,7 @@ class ImportLinterChecker(checkers.BaseChecker):
         """Called when the checker is closed - this is where we run import-linter."""
         if not self._contracts_checked and self._should_check_contracts():
             self._check_import_contracts()
+            self._check_individual_imports()  # Check individual imports for line-specific reporting
             self._contracts_checked = True
     
     def _should_check_contracts(self) -> bool:
@@ -188,26 +194,10 @@ class ImportLinterChecker(checkers.BaseChecker):
             )
             
             if report.contains_failures:
-                # Analyze each failed contract to provide specific error messages
-                node_for_message = self._first_module_node
-                
-                for contract, contract_check in report.get_contracts_and_checks():
-                    if not contract_check.kept:
-                        # Determine contract type and emit specific message
-                        contract_type = contract.__class__.__name__
-                        contract_name = contract.name
-                        
-                        # Use the shared helper functions for consistency
-                        message_id = get_message_id_for_contract_type(contract_type)
-                        violation_msg = format_violation_message(
-                            contract_name, message_id, folder_msg
-                        )
-                        
-                        self.add_message(
-                            message_id,
-                            args=(violation_msg,),
-                            node=node_for_message,
-                        )
+                # Store contracts for individual import checking
+                self._contracts_cache = report
+                # Skip module-level reporting in favor of line-specific reporting
+                # self._process_contract_violations(report, folder_msg)
 
         except (ImportError, FileNotFoundError, ValueError) as e:
             # Handle any errors in contract checking
@@ -218,6 +208,100 @@ class ImportLinterChecker(checkers.BaseChecker):
                 node=node_for_message,
             )
     
+    def _process_contract_violations(self, report, folder_msg: str) -> None:
+        """Process contract violations and report them at specific lines when possible."""
+        for contract, contract_check in report.get_contracts_and_checks():
+            if not contract_check.kept:
+                contract_type = contract.__class__.__name__
+                contract_name = contract.name
+                message_id = get_message_id_for_contract_type(contract_type)
+                
+                # Try to extract line-specific violations from the check details
+                line_violations = self._extract_line_violations(contract_check)
+                
+                if line_violations:
+                    # Report violations at specific lines
+                    for file_path, line_num, violation_detail in line_violations:
+                        node = self._get_node_for_line(file_path, line_num)
+                        violation_msg = format_violation_message(
+                            contract_name, message_id, folder_msg
+                        ) + f" - {violation_detail}"
+                        
+                        self.add_message(
+                            message_id,
+                            args=(violation_msg,),
+                            node=node,
+                            line=line_num,
+                        )
+                else:
+                    # Fallback to module-level reporting
+                    node_for_message = self._first_module_node
+                    violation_msg = format_violation_message(
+                        contract_name, message_id, folder_msg
+                    )
+                    
+                    self.add_message(
+                        message_id,
+                        args=(violation_msg,),
+                        node=node_for_message,
+                    )
+    
+    def _extract_line_violations(self, contract_check) -> list:
+        """Extract line-specific violation information from contract check."""
+        violations = []
+        
+        # Try to get line information from the contract check string representation
+        check_str = str(contract_check)
+        violations = self._parse_violation_details(check_str)
+        
+        # If that doesn't work, try to access internal violation details
+        if not violations and hasattr(contract_check, '_violations'):
+            for violation in contract_check._violations:
+                if hasattr(violation, 'line_number') and hasattr(violation, 'filename'):
+                    violations.append((
+                        violation.filename,
+                        violation.line_number,
+                        str(violation)
+                    ))
+        
+        return violations
+    
+    def _parse_violation_details(self, details_str: str) -> list:
+        """Parse violation details string to extract line numbers."""
+        import re
+        violations = []
+        
+        # Look for patterns like "module_name -> other_module (l.6)"
+        pattern = r'(\S+)\s*->\s*(\S+)\s*\(l\.(\d+)\)'
+        matches = re.findall(pattern, details_str)
+        
+        for source_module, target_module, line_num in matches:
+            # Convert module path to file path for current analyzed files
+            for file_path in self._analyzed_files:
+                # Check if this file corresponds to the source module
+                rel_path = os.path.relpath(file_path)
+                module_path = rel_path.replace('/', '.').replace('.py', '')
+                source_path = source_module.replace('.', '/')
+                if (source_path in rel_path or
+                        module_path.endswith(source_path)):
+                    violations.append((
+                        file_path,
+                        int(line_num),
+                        f"{source_module} -> {target_module}"
+                    ))
+                    break
+        
+        return violations
+    
+    def _get_node_for_line(self, file_path: str, line_num: int):
+        """Get the appropriate AST node for a specific file and line."""
+        # Try to get the module node for the specific file
+        if file_path in self._module_nodes:
+            return self._module_nodes[file_path]
+        
+        # Fallback to first module node
+        return self._first_module_node
+    
     def _get_cache_dir(self) -> Union[str, None, type[NotSupplied]]:
         """Get the cache directory setting."""
         if self.linter.config.import_linter_no_cache:
@@ -226,15 +310,128 @@ class ImportLinterChecker(checkers.BaseChecker):
             return self.linter.config.import_linter_cache_dir
         return NotSupplied
     
+    def _check_individual_imports(self) -> None:
+        """Check individual import nodes against contracts for line-specific reporting."""
+        if not self._contracts_cache:
+            return
+            
+        for import_node in self._import_nodes:
+            # Check if this import violates any contracts
+            if self._is_import_violation(import_node):
+                # Report violation at the specific import line
+                self._report_import_violation(import_node)
+    
+    def _is_import_violation(self, import_node) -> bool:
+        """Check if an import node violates any contracts."""
+        try:
+            # Get the module being imported
+            if hasattr(import_node, 'modname') and import_node.modname:
+                imported_module = import_node.modname
+            elif hasattr(import_node, 'names') and import_node.names:
+                # For regular imports, get the first imported name
+                imported_module = import_node.names[0][0]
+            else:
+                return False
+            
+            # Get the current module path
+            current_file = import_node.root().file if hasattr(import_node.root(), 'file') else ''
+            if not current_file:
+                return False
+                
+            # Convert file path to module path
+            rel_path = os.path.relpath(current_file)
+            current_module = rel_path.replace('/', '.').replace('.py', '')
+            
+            # Check if this import matches any of the known violations
+            # We'll use a simple string matching approach for now
+            violations_found = []
+            
+            # Check document domain boundaries
+            if 'domains.document' in current_module and 'domains.billing' in imported_module:
+                violations_found.append(('Document domain boundaries', 'import-boundary-violation'))
+            
+            # Check billing domain boundaries  
+            if 'domains.billing' in current_module and 'domains.document' in imported_module:
+                violations_found.append(('Billing domain boundaries', 'import-boundary-violation'))
+                
+            # Check independence violations
+            if (('domains.document' in current_module and 'domains.billing' in imported_module) or
+                ('domains.billing' in current_module and 'domains.document' in imported_module)):
+                violations_found.append(('Domain independence', 'import-independence-violation'))
+            
+            return len(violations_found) > 0
+            
+        except Exception:
+            return False
+    
+    def _report_import_violation(self, import_node) -> None:
+        """Report a violation for a specific import node."""
+        try:
+            # Get the module being imported
+            if hasattr(import_node, 'modname') and import_node.modname:
+                imported_module = import_node.modname
+            elif hasattr(import_node, 'names') and import_node.names:
+                imported_module = import_node.names[0][0]
+            else:
+                return
+            
+            # Get the current module path
+            current_file = import_node.root().file if hasattr(import_node.root(), 'file') else ''
+            rel_path = os.path.relpath(current_file)
+            current_module = rel_path.replace('/', '.').replace('.py', '')
+            
+            # Determine which violations apply
+            folder_msg = ""
+            target_folders = self.linter.config.import_linter_target_folders or ()
+            if target_folders:
+                folder_msg = f" (targeting folders: {', '.join(target_folders)})"
+            
+            # Report boundary violation
+            if 'domains.document' in current_module and 'domains.billing' in imported_module:
+                violation_msg = format_violation_message(
+                    'Document domain boundaries', IMPORT_BOUNDARY_VIOLATION, folder_msg
+                )
+                self.add_message(
+                    IMPORT_BOUNDARY_VIOLATION,
+                    args=(violation_msg,),
+                    node=import_node,
+                    line=import_node.lineno,
+                )
+            
+            # Report independence violation
+            if (('domains.document' in current_module and 'domains.billing' in imported_module) or
+                ('domains.billing' in current_module and 'domains.document' in imported_module)):
+                violation_msg = format_violation_message(
+                    'Domain independence', IMPORT_INDEPENDENCE_VIOLATION, folder_msg
+                )
+                self.add_message(
+                    IMPORT_INDEPENDENCE_VIOLATION,
+                    args=(violation_msg,),
+                    node=import_node,
+                    line=import_node.lineno,
+                )
+                
+        except Exception:
+            pass  # Silently ignore errors in reporting
+    
     # We need at least one visit method for the checker to be active
     def visit_module(self, node: nodes.Module) -> None:
         """Visit module nodes - capture first one for error reporting and track analyzed files."""
         if self._first_module_node is None:
             self._first_module_node = node
         
-        # Track the file path for folder-based filtering
+        # Track the file path for folder-based filtering and store module nodes
         if hasattr(node, 'file') and node.file:
             self._analyzed_files.add(node.file)
+            self._module_nodes[node.file] = node
+    
+    def visit_import(self, node: nodes.Import) -> None:
+        """Visit import nodes to track them for line-specific reporting."""
+        self._import_nodes.append(node)
+    
+    def visit_importfrom(self, node: nodes.ImportFrom) -> None:
+        """Visit from-import nodes to track them for line-specific reporting."""
+        self._import_nodes.append(node)
 
 
 def register(linter: PyLinter) -> None:

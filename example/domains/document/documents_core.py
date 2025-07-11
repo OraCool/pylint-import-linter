@@ -3,8 +3,7 @@
 # Note: The following import would be flagged as a DDD violation - testing clean config
 from domains.pd_common.core import BaseService, ValidationError
 
-# from domains.billing.payments import PaymentService # This should be flagged
-
+from domains.billing.payments import PaymentService # This should be flagged
 
 class Document:
     """Document entity."""
