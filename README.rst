@@ -23,6 +23,7 @@ Import Linter allows you to define and enforce rules for the imports within and 
 
 - **Command Line Tool**: Standalone import linting
 - **Pylint Plugin**: Integrated architecture checking within pylint workflow  
+- **Folder-Specific Targeting**: Configure checking for particular folders only
 - **Multiple Contract Types**: layers, forbidden imports, independence
 - **Flexible Configuration**: TOML and INI support
 - **CI/CD Ready**: Perfect for continuous integration
@@ -65,10 +66,28 @@ Import Linter can be integrated into your pylint workflow for seamless architect
     [MAIN]
     load-plugins=importlinter.pylint_plugin
 
+**Folder-Specific Checking:**
+
+Target specific folders for large codebases or gradual adoption:
+
+.. code-block:: bash
+
+    # Only check core modules
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-target-folders=src/core,src/api \
+           src/
+
+    # Exclude test and documentation folders
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-exclude-folders=tests,docs \
+           src/
+
 **IDE Integration:**
 Most IDEs that support pylint will automatically pick up the plugin when configured in your project settings.
 
-See `PLUGIN.md` for complete plugin documentation and advanced configuration options.
+See the `documentation <https://import-linter.readthedocs.io/>`_ for complete plugin documentation and advanced configuration options.
+
+For folder-specific configuration and advanced targeting examples, see the documentation.
 
 Overview
 --------
