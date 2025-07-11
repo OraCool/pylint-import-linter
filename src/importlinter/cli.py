@@ -7,7 +7,11 @@ from typing import Optional, Tuple, Type, Union
 import click
 
 from importlinter.application.sentinels import NotSupplied
-from importlinter.application.formatters import format_report_as_json, should_use_json_output
+from importlinter.application.formatters import (
+    format_report_as_json,
+    format_report_as_json2,
+    should_use_json_output
+)
 
 from . import configuration
 from .application import use_cases
@@ -53,8 +57,8 @@ EXIT_STATUS_ERROR = 1
     "--format",
     "output_format",
     default="text",
-    type=click.Choice(["text", "json"], case_sensitive=False),
-    help="Output format (text for human-readable, json for structured output).",
+    type=click.Choice(["text", "json", "json2"], case_sensitive=False),
+    help="Output format (text for human-readable, json/json2 for structured output).",
 )
 def lint_imports_command(
     config: Optional[str],
@@ -166,7 +170,10 @@ def lint_imports(
             )
             
             # Output JSON format
-            json_output = format_report_as_json(report, folder_info)
+            if output_format.lower() == "json2":
+                json_output = format_report_as_json2(report, folder_info)
+            else:  # json
+                json_output = format_report_as_json(report, folder_info)
             click.echo(json_output)
             
             return EXIT_STATUS_SUCCESS if not report.contains_failures else EXIT_STATUS_ERROR
@@ -175,10 +182,43 @@ def lint_imports(
             if is_debug_mode:
                 raise
             # Output error in JSON format
-            error_output = {
-                "error": str(e),
-                "summary": {"has_violations": True, "error": True}
-            }
+            if output_format.lower() == "json2":
+                error_output = {
+                    "messages": [
+                        {
+                            "type": "fatal",
+                            "symbol": "import-contract-error",
+                            "message": f"Import contract error: {str(e)}",
+                            "messageId": "E9002",
+                            "confidence": "HIGH",
+                            "module": "",
+                            "obj": "",
+                            "line": 1,
+                            "column": 0,
+                            "endLine": None,
+                            "endColumn": None,
+                            "path": "",
+                            "absolutePath": ""
+                        }
+                    ],
+                    "statistics": {
+                        "messageTypeCount": {
+                            "fatal": 1,
+                            "error": 0,
+                            "warning": 0,
+                            "refactor": 0,
+                            "convention": 0,
+                            "info": 0
+                        },
+                        "modulesLinted": 0,
+                        "score": 0.0
+                    }
+                }
+            else:  # json
+                error_output = {
+                    "error": str(e),
+                    "summary": {"has_violations": True, "error": True}
+                }
             click.echo(json.dumps(error_output, indent=2))
             return EXIT_STATUS_ERROR
     else:
