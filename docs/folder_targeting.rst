@@ -270,3 +270,189 @@ This is expected behavior. Import-linter analyzes the entire project graph and m
            src/
 
 This is actually beneficial - it ensures architectural integrity across the entire codebase.
+
+Practical Example
+=================
+
+The project includes a complete example demonstrating folder-specific targeting with a Domain-Driven Design architecture.
+
+Example Structure
+-----------------
+
+.. code-block:: text
+
+    example/
+    ├── domains/
+    │   ├── document/           # Document domain
+    │   ├── billing/           # Billing domain  
+    │   ├── org_and_user/      # User management
+    │   └── pd_common/         # Shared utilities
+    └── importlinter.ini       # DDD configuration
+
+Running the Example
+-------------------
+
+.. code-block:: bash
+
+    # Full analysis - all domains
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=example/importlinter.ini \
+           example/domains/
+
+    # Target only document domain
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=example/importlinter.ini \
+           --import-linter-target-folders=example/domains/document \
+           example/domains/
+
+    # Exclude shared utilities
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=example/importlinter.ini \
+           --import-linter-exclude-folders=example/domains/pd_common \
+           example/domains/
+
+Interactive Demo
+----------------
+
+Run the included demo script to see all scenarios::
+
+    ./demo_folder_targeting.sh
+
+This demonstrates:
+
+- ✅ Full domain analysis with boundary violations
+- ✅ Selective domain targeting 
+- ✅ Infrastructure folder exclusion
+- ✅ Business domain focus
+- ✅ No-match scenarios (skips analysis)
+
+IDE Integration and JSON Output
+===============================
+
+The pylint plugin supports all standard pylint output formats, enabling seamless integration with IDEs and development tools that rely on structured output for syntax highlighting and error reporting.
+
+JSON Output Support
+-------------------
+
+The plugin works perfectly with pylint's JSON output formats, providing structured data for automated processing:
+
+.. code-block:: bash
+
+    # Standard JSON format
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=example/importlinter.ini \
+           --output-format=json \
+           example/domains/
+
+    # Improved JSON format (recommended)
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=example/importlinter.ini \
+           --output-format=json2 \
+           example/domains/
+
+JSON Output Structure
+--------------------
+
+Import contract violations appear as standard pylint error messages in JSON output:
+
+.. code-block:: json
+
+    {
+        "type": "error",
+        "module": "example.domains",
+        "obj": "",
+        "line": 1,
+        "column": 0,
+        "endLine": null,
+        "endColumn": null,
+        "path": "example/domains/__init__.py",
+        "symbol": "import-contract-violation",
+        "message": "Import contract violation: Contract validation failed (targeting folders: example/domains/document). Run 'lint-imports --verbose' for details.",
+        "message-id": "E9001"
+    }
+
+The folder targeting information is included in the message field, enabling tools to understand which folders are being analyzed.
+
+GitHub Actions Integration
+--------------------------
+
+For GitHub Actions workflows, use the GitHub-specific output format:
+
+.. code-block:: yaml
+
+    name: Architecture Compliance
+    on: [push, pull_request]
+
+    jobs:
+      check-architecture:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-python@v4
+          with:
+            python-version: '3.11'
+        - run: pip install import-linter pylint
+        - name: Check import contracts with folder targeting
+          run: |
+            pylint --load-plugins=importlinter.pylint_plugin \
+                   --import-linter-target-folders=src/core \
+                   --output-format=github \
+                   src/
+
+This produces GitHub-compatible annotations:
+
+.. code-block:: text
+
+    ::error file=src/__init__.py,line=1,col=0,title=E9001::Import contract violation: Contract validation failed (targeting folders: src/core)
+
+IDE Configuration Examples
+--------------------------
+
+VS Code with Python Extension
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Configure in ``.vscode/settings.json``:
+
+.. code-block:: json
+
+    {
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.linting.pylintArgs": [
+            "--load-plugins=importlinter.pylint_plugin",
+            "--import-linter-target-folders=src/core,src/api"
+        ]
+    }
+
+PyCharm Configuration
+~~~~~~~~~~~~~~~~~~~~
+
+1. Go to **Settings** → **Tools** → **External Tools**
+2. Add new tool with:
+   - **Program**: ``pylint``
+   - **Arguments**: ``--load-plugins=importlinter.pylint_plugin --import-linter-target-folders=src/core $FilePath$``
+   - **Working Directory**: ``$ProjectFileDir$``
+
+Vim/Neovim with ALE
+~~~~~~~~~~~~~~~~~~
+
+Configure in your ``.vimrc`` or ``init.vim``:
+
+.. code-block:: vim
+
+    let g:ale_python_pylint_options = '--load-plugins=importlinter.pylint_plugin --import-linter-target-folders=src/core'
+
+Output Format Compatibility
+---------------------------
+
+The plugin supports all pylint output formats:
+
+- **text** (default): Human-readable output
+- **parseable**: Machine-readable format
+- **colorized**: Colored terminal output  
+- **json**: Standard JSON format
+- **json2**: Improved JSON format with statistics
+- **github**: GitHub Actions annotations
+- **msvs**: Visual Studio format
+
+Each format preserves folder targeting information in the appropriate structure, ensuring compatibility with any tool that processes pylint output.

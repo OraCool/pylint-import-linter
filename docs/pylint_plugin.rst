@@ -405,3 +405,84 @@ The plugin is designed to be efficient:
 - **Memory efficient**: Minimal memory overhead
 
 For more advanced folder targeting examples and use cases, see :doc:`folder_targeting`.
+
+Example Project
+===============
+
+The repository includes a complete Domain-Driven Design example in the ``example/`` folder:
+
+.. code-block:: bash
+
+    # Test with the included DDD example
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=example/importlinter.ini \
+           --import-linter-target-folders=example/domains/document \
+           example/domains/
+
+    # Run the interactive demo
+    ./demo_folder_targeting.sh
+
+This demonstrates real-world usage with domain boundaries, layered architecture, and selective targeting.
+
+JSON Output and Tool Integration
+=================================
+
+The pylint plugin provides full compatibility with pylint's output formats, enabling seamless integration with development tools, IDEs, and CI/CD pipelines.
+
+JSON Output Examples
+-------------------
+
+Standard JSON format with import contract violations:
+
+.. code-block:: bash
+
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --output-format=json \
+           src/
+
+Example JSON output:
+
+.. code-block:: json
+
+    [
+        {
+            "type": "error",
+            "module": "myproject.core",
+            "obj": "",
+            "line": 1,
+            "column": 0,
+            "path": "src/core/__init__.py",
+            "symbol": "import-contract-violation",
+            "message": "Import contract violation: Layer 'high' must not import 'low'",
+            "message-id": "E9001"
+        }
+    ]
+
+The improved JSON2 format includes additional statistics:
+
+.. code-block:: bash
+
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --output-format=json2 \
+           src/
+
+Tool Integration Benefits
+------------------------
+
+**Structured Error Reporting**: Import contract violations appear as standard pylint errors with:
+- Consistent error codes (E9001, E9002)  
+- File location information
+- Clear violation messages
+- Machine-readable format
+
+**IDE Compatibility**: Works with any IDE that supports pylint:
+- VS Code Python extension
+- PyCharm/IntelliJ IDEA
+- Vim/Neovim with ALE
+- Emacs with flycheck
+
+**CI/CD Integration**: Compatible with all pylint-based workflows:
+- GitHub Actions annotations
+- Jenkins pipeline reporting
+- GitLab CI integration
+- Azure DevOps builds
