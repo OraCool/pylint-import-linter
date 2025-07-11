@@ -1,8 +1,8 @@
 """Valid cross-domain integration through proper interfaces."""
 
-from example.domains.org_and_user.users import UserService
-from example.domains.org_and_user.workspaces import WorkspaceService
-from example.domains.pd_common.core import BaseService
+from domains.org_and_user.users import UserService
+from domains.org_and_user.workspaces import WorkspaceService
+from domains.pd_common.core import BaseService
 
 
 class OrganizationService(BaseService):

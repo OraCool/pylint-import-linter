@@ -1,8 +1,8 @@
 """Billing operations that violate DDD boundaries (for testing)."""
 
 # VIOLATION: Billing domain accessing org_and_user internals directly
-from example.domains.org_and_user.users import UserService  # This should be flagged
-from example.domains.pd_common.core import BaseService
+from domains.org_and_user.users import UserService  # This should be flagged
+from domains.pd_common.core import BaseService
 
 from .payments import PaymentService
 

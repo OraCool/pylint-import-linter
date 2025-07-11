@@ -1,7 +1,7 @@
 """Payment processing within billing domain."""
 
-from example.domains.pd_common.clients import APIClient
-from example.domains.pd_common.core import BaseService, ValidationError, format_currency
+from domains.pd_common.clients import APIClient
+from domains.pd_common.core import BaseService, ValidationError, format_currency
 
 
 class Payment:
@@ -24,7 +24,7 @@ class PaymentService(BaseService):
 
     def __init__(self):
         super().__init__()
-        self.payment_gateway = APIClient("https://payment-api.example.com", "key")
+        self.payment_gateway = APIClient("https://payment-api.com", "key")
 
     def process_payment(self, amount, currency, workspace_id):
         """Process a payment."""

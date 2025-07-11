@@ -1,14 +1,14 @@
 """Document operations that violate DDD boundaries (for testing)."""
 
 # VIOLATION: Document domain accessing billing internals directly
-from example.domains.billing.payments import PaymentService  # This should be flagged
+from domains.billing.payments import PaymentService  # This should be flagged
 
 # VIOLATION: Document domain accessing org_and_user internals directly
-from example.domains.org_and_user.users import UserService  # This should be flagged
-from example.domains.org_and_user.workspaces import (  # This should be flagged
+from domains.org_and_user.users import UserService  # This should be flagged
+from domains.org_and_user.workspaces import (  # This should be flagged
     WorkspaceService,
 )
-from example.domains.pd_common.core import BaseService
+from domains.pd_common.core import BaseService
 
 from .documents_core import DocumentService
 

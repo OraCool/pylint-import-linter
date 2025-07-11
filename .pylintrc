@@ -1,0 +1,34 @@
+[MAIN]
+# Load import-linter pylint plugin
+load-plugins = importlinter.pylint_plugin
+
+[importlinter]
+# Import-linter configuration file path
+import_linter_config = importlinter.ini
+
+# Optional: Specify which contracts to check (defaults to all)
+# import_linter_contracts = contract1,contract2
+
+# Optional: Target specific folders for analysis
+# import_linter_target_folders = src/core,src/domain
+
+# Optional: Exclude folders from analysis  
+# import_linter_exclude_folders = tests,docs,migrations
+
+# Optional: Custom cache directory
+# import_linter_cache_dir = .custom_cache
+
+# Optional: Disable caching
+# import_linter_no_cache = no
+
+[MESSAGES CONTROL]
+# Enable import contract violation checks - specific error types for different violations
+# E9003: import-boundary-violation (forbidden contracts)
+# E9004: import-layer-violation (layers contracts)  
+# E9005: import-independence-violation (independence contracts)
+# E9001: import-contract-violation (generic violations)
+# E9002: import-contract-error (configuration/runtime errors)
+enable = import-boundary-violation,import-layer-violation,import-independence-violation,import-contract-violation,import-contract-error
+
+# Disable some warnings that are acceptable for example code
+disable = unused-import,missing-module-docstring,missing-class-docstring,missing-function-docstring

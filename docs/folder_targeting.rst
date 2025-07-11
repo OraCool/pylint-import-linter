@@ -359,7 +359,7 @@ Import contract violations appear as standard pylint error messages in JSON outp
 
     {
         "type": "error",
-        "module": "example.domains",
+        "module": "domains",
         "obj": "",
         "line": 1,
         "column": 0,

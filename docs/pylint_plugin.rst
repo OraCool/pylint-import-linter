@@ -143,15 +143,41 @@ The plugin supports targeting specific folders for contract checking, which is u
 Error Messages
 ==============
 
-The plugin provides two types of error messages:
+The plugin provides specific error codes for different types of architectural violations:
+
+E9003: import-boundary-violation
+--------------------------------
+Triggered when an import violates a forbidden import contract (boundary violations).
+
+E9004: import-layer-violation
+-----------------------------
+Triggered when an import violates a layer-based contract.
+
+E9005: import-independence-violation
+------------------------------------
+Triggered when an import violates an independence contract.
 
 E9001: import-contract-violation
 --------------------------------
-Triggered when an import violates a defined contract (e.g., layer violations, forbidden imports).
+Triggered when an import violates a defined contract (generic violations).
 
 E9002: import-contract-error
 ----------------------------  
 Triggered when there's an error in the plugin or import-linter configuration.
+
+Configuration
+^^^^^^^^^^^^^
+
+In your ``.pylintrc`` configuration file:
+
+.. code-block:: ini
+
+   [MESSAGES CONTROL]
+   # Enable specific import contract checks
+   enable = import-boundary-violation,import-layer-violation,import-independence-violation,import-contract-violation,import-contract-error
+   
+   # Or enable specific types only
+   enable = import-boundary-violation,import-layer-violation
 
 Examples
 ========

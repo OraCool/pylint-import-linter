@@ -1,6 +1,6 @@
 """Workspace management within org_and_user domain."""
 
-from example.domains.pd_common.core import BaseService, ValidationError
+from domains.pd_common.core import BaseService, ValidationError
 
 from .users import UserService
 

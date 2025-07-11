@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Union
 from pylint import checkers
 from pylint.lint import PyLinter
 
-from importlinter.application import use_cases
 from importlinter.application.sentinels import NotSupplied
 from importlinter.configuration import configure
 
@@ -23,6 +22,9 @@ if TYPE_CHECKING:
 configure()
 
 # Plugin message definitions
+IMPORT_BOUNDARY_VIOLATION = "import-boundary-violation"
+IMPORT_LAYER_VIOLATION = "import-layer-violation"
+IMPORT_INDEPENDENCE_VIOLATION = "import-independence-violation"
 IMPORT_CONTRACT_VIOLATION = "import-contract-violation"
 IMPORT_CONTRACT_ERROR = "import-contract-error"
 
@@ -36,6 +38,21 @@ MESSAGES = {
         "Import contract error: %s",
         IMPORT_CONTRACT_ERROR,
         "Error occurred while checking import contracts",
+    ),
+    "E9003": (
+        "Domain boundary violation: %s",
+        IMPORT_BOUNDARY_VIOLATION,
+        "Import violates domain boundaries (forbidden contract)",
+    ),
+    "E9004": (
+        "Layer violation: %s",
+        IMPORT_LAYER_VIOLATION,
+        "Import violates layer architecture (layers contract)",
+    ),
+    "E9005": (
+        "Independence violation: %s",
+        IMPORT_INDEPENDENCE_VIOLATION,
+        "Import violates module independence (independence contract)",
     ),
 }
 
@@ -167,7 +184,7 @@ class ImportLinterChecker(checkers.BaseChecker):
             limit_to_contracts = tuple(self.linter.config.import_linter_contracts or ())
             cache_dir = self._get_cache_dir()
             
-            # Log which files are being analyzed for debugging
+            # Get folder filtering information for messages
             target_folders = self.linter.config.import_linter_target_folders or ()
             exclude_folders = self.linter.config.import_linter_exclude_folders or ()
             
@@ -182,29 +199,74 @@ class ImportLinterChecker(checkers.BaseChecker):
             else:
                 folder_msg = ""
             
-            # Run import-linter
-            passed = use_cases.lint_imports(
-                config_filename=config_filename,
+            # Read user options and register contract types
+            from importlinter.application.use_cases import (
+                read_user_options, create_report, _register_contract_types
+            )
+            
+            user_options = read_user_options(config_filename=config_filename)
+            _register_contract_types(user_options)
+            
+            # Create detailed report instead of just checking pass/fail
+            report = create_report(
+                user_options=user_options,
                 limit_to_contracts=limit_to_contracts,
                 cache_dir=cache_dir,
-                is_debug_mode=False,
                 show_timings=False,
                 verbose=False,
             )
             
-            if not passed:
-                # Import-linter failed
-                violation_msg = (
-                    f"Contract validation failed{folder_msg}. "
-                    "Run 'lint-imports --verbose' for details."
-                )
-                # Use the first module node we encountered, or create a dummy one
+            if report.contains_failures:
+                # Analyze each failed contract to provide specific error messages
                 node_for_message = self._first_module_node
-                self.add_message(
-                    IMPORT_CONTRACT_VIOLATION,
-                    args=(violation_msg,),
-                    node=node_for_message,
-                )
+                
+                for contract, contract_check in report.get_contracts_and_checks():
+                    if not contract_check.kept:
+                        # Determine contract type and emit specific message
+                        contract_type = contract.__class__.__name__
+                        contract_name = contract.name
+                        
+                        if "ForbiddenContract" in contract_type:
+                            violation_msg = (
+                                f"Forbidden import detected in '{contract_name}'"
+                                f"{folder_msg}. Run 'lint-imports --verbose' for details."
+                            )
+                            self.add_message(
+                                IMPORT_BOUNDARY_VIOLATION,
+                                args=(violation_msg,),
+                                node=node_for_message,
+                            )
+                        elif "LayersContract" in contract_type:
+                            violation_msg = (
+                                f"Layer boundary violated in '{contract_name}'"
+                                f"{folder_msg}. Run 'lint-imports --verbose' for details."
+                            )
+                            self.add_message(
+                                IMPORT_LAYER_VIOLATION,
+                                args=(violation_msg,),
+                                node=node_for_message,
+                            )
+                        elif "IndependenceContract" in contract_type:
+                            violation_msg = (
+                                f"Module independence violated in '{contract_name}'"
+                                f"{folder_msg}. Run 'lint-imports --verbose' for details."
+                            )
+                            self.add_message(
+                                IMPORT_INDEPENDENCE_VIOLATION,
+                                args=(violation_msg,),
+                                node=node_for_message,
+                            )
+                        else:
+                            # Fallback to generic contract violation
+                            violation_msg = (
+                                f"Contract validation failed for '{contract_name}'"
+                                f"{folder_msg}. Run 'lint-imports --verbose' for details."
+                            )
+                            self.add_message(
+                                IMPORT_CONTRACT_VIOLATION,
+                                args=(violation_msg,),
+                                node=node_for_message,
+                            )
 
         except (ImportError, FileNotFoundError, ValueError) as e:
             # Handle any errors in contract checking

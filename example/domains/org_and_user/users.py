@@ -1,7 +1,7 @@
 """User management within org_and_user domain."""
 
-from example.domains.pd_common.clients import EmailClient
-from example.domains.pd_common.core import BaseService, ValidationError
+from domains.pd_common.clients import EmailClient
+from domains.pd_common.core import BaseService, ValidationError
 
 
 class User:

@@ -1,6 +1,6 @@
 """Template management within document domain."""
 
-from example.domains.pd_common.core import BaseService
+from domains.pd_common.core import BaseService
 
 from .documents_core import DocumentService
 
