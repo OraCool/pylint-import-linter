@@ -22,6 +22,10 @@ case "$1" in
         echo "Running pylint..."
         uv run pylint "${@:2}"
         ;;
+    "plugin")
+        echo "Testing pylint plugin..."
+        uv run pylint --load-plugins=importlinter.pylint_plugin "${@:2}"
+        ;;
     "black")
         echo "Running black formatter..."
         uv run black "${@:2}"
@@ -35,13 +39,14 @@ case "$1" in
         echo "Run: source .venv/bin/activate"
         ;;
     *)
-        echo "Usage: $0 {install|test|lint|pylint|black|mypy|shell} [args...]"
+        echo "Usage: $0 {install|test|lint|pylint|plugin|black|mypy|shell} [args...]"
         echo ""
         echo "Commands:"
         echo "  install  - Install all dependencies"
         echo "  test     - Run pytest tests"
         echo "  lint     - Run import linter"
         echo "  pylint   - Run pylint"
+        echo "  plugin   - Test pylint plugin"
         echo "  black    - Run black formatter"
         echo "  mypy     - Run mypy type checker"
         echo "  shell    - Show command to activate venv"
