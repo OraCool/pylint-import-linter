@@ -7,8 +7,8 @@ with CI/CD systems and automated tooling.
 import json
 
 from importlinter.application.constants import (
-    CONTRACT_TYPE_TO_MESSAGE_ID,
-    DEFAULT_CONTRACT_MESSAGE_ID,
+    get_message_id_for_contract_type,
+    format_violation_message,
 )
 
 
@@ -47,16 +47,16 @@ def format_report_as_json(report, folder_info: str = "") -> str:
             
             # Get the appropriate message ID for this contract type
             contract_type = contract.__class__.__name__
-            message_id = CONTRACT_TYPE_TO_MESSAGE_ID.get(
-                contract_type, DEFAULT_CONTRACT_MESSAGE_ID
-            )
+            message_id = get_message_id_for_contract_type(contract_type)
             
             # Create violation entry compatible with pylint plugin format
             violation = {
                 "symbol": message_id,
                 "contract_name": contract.name,
                 "contract_type": contract_type,
-                "message": _get_violation_message(contract, message_id, folder_info),
+                "message": format_violation_message(
+                    contract.name, contract_type, folder_info
+                ),
                 "details": [],
             }
             
@@ -75,32 +75,6 @@ def format_report_as_json(report, folder_info: str = "") -> str:
         result["contracts"].append(contract_info)
     
     return json.dumps(result, indent=2)
-
-
-def _get_violation_message(contract, message_id: str, folder_info: str) -> str:
-    """Generate a violation message consistent with the pylint plugin."""
-    contract_name = contract.name
-    
-    if message_id == "import-boundary-violation":
-        return (
-            f"Forbidden import detected in '{contract_name}'{folder_info}. "
-            "Run 'lint-imports --verbose' for details."
-        )
-    elif message_id == "import-layer-violation":
-        return (
-            f"Layer boundary violated in '{contract_name}'{folder_info}. "
-            "Run 'lint-imports --verbose' for details."
-        )
-    elif message_id == "import-independence-violation":
-        return (
-            f"Module independence violated in '{contract_name}'{folder_info}. "
-            "Run 'lint-imports --verbose' for details."
-        )
-    else:
-        return (
-            f"Contract validation failed for '{contract_name}'{folder_info}. "
-            "Run 'lint-imports --verbose' for details."
-        )
 
 
 def should_use_json_output(format_type: str) -> bool:

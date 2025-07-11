@@ -15,13 +15,10 @@ from pylint.lint import PyLinter
 from importlinter.application.sentinels import NotSupplied
 from importlinter.configuration import configure
 from importlinter.application.constants import (
-    IMPORT_BOUNDARY_VIOLATION,
-    IMPORT_LAYER_VIOLATION,
-    IMPORT_INDEPENDENCE_VIOLATION,
     IMPORT_CONTRACT_ERROR,
-    CONTRACT_TYPE_TO_MESSAGE_ID,
-    DEFAULT_CONTRACT_MESSAGE_ID,
     MESSAGES,
+    format_violation_message,
+    get_message_id_for_contract_type,
 )
 
 if TYPE_CHECKING:
@@ -200,32 +197,11 @@ class ImportLinterChecker(checkers.BaseChecker):
                         contract_type = contract.__class__.__name__
                         contract_name = contract.name
                         
-                        # Use the mapping to get the appropriate message ID
-                        message_id = CONTRACT_TYPE_TO_MESSAGE_ID.get(
-                            contract_type, DEFAULT_CONTRACT_MESSAGE_ID
+                        # Use the shared helper functions for consistency
+                        message_id = get_message_id_for_contract_type(contract_type)
+                        violation_msg = format_violation_message(
+                            contract_name, message_id, folder_msg
                         )
-                        
-                        if message_id == IMPORT_BOUNDARY_VIOLATION:
-                            violation_msg = (
-                                f"Forbidden import detected in '{contract_name}'"
-                                f"{folder_msg}. Run 'lint-imports --verbose' for details."
-                            )
-                        elif message_id == IMPORT_LAYER_VIOLATION:
-                            violation_msg = (
-                                f"Layer boundary violated in '{contract_name}'"
-                                f"{folder_msg}. Run 'lint-imports --verbose' for details."
-                            )
-                        elif message_id == IMPORT_INDEPENDENCE_VIOLATION:
-                            violation_msg = (
-                                f"Module independence violated in '{contract_name}'"
-                                f"{folder_msg}. Run 'lint-imports --verbose' for details."
-                            )
-                        else:
-                            # Fallback to generic contract violation
-                            violation_msg = (
-                                f"Contract validation failed for '{contract_name}'"
-                                f"{folder_msg}. Run 'lint-imports --verbose' for details."
-                            )
                         
                         self.add_message(
                             message_id,

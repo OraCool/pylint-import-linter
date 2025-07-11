@@ -51,3 +51,41 @@ MESSAGES = {
         "Import violates module independence (independence contract)",
     ),
 }
+
+
+def format_violation_message(contract_name: str, message_id: str, folder_info: str = "") -> str:
+    """
+    Generate a standardized violation message for both CLI and pylint plugin.
+    
+    This ensures consistent messaging across all import-linter tools.
+    
+    Args:
+        contract_name: The name of the violated contract
+        message_id: The specific violation type (import-boundary-violation, etc.)
+        folder_info: Optional folder targeting information
+        
+    Returns:
+        A formatted violation message string
+    """
+    base_messages = {
+        IMPORT_BOUNDARY_VIOLATION: f"Forbidden import detected in '{contract_name}'",
+        IMPORT_LAYER_VIOLATION: f"Layer boundary violated in '{contract_name}'",
+        IMPORT_INDEPENDENCE_VIOLATION: f"Module independence violated in '{contract_name}'",
+        IMPORT_CONTRACT_VIOLATION: f"Contract validation failed for '{contract_name}'",
+    }
+    
+    base_msg = base_messages.get(message_id, f"Contract validation failed for '{contract_name}'")
+    return f"{base_msg}{folder_info}. Run 'lint-imports --verbose' for details."
+
+
+def get_message_id_for_contract_type(contract_type: str) -> str:
+    """
+    Get the appropriate message ID for a given contract type.
+    
+    Args:
+        contract_type: The contract class name (e.g., "ForbiddenContract")
+        
+    Returns:
+        The corresponding message ID
+    """
+    return CONTRACT_TYPE_TO_MESSAGE_ID.get(contract_type, DEFAULT_CONTRACT_MESSAGE_ID)
