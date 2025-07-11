@@ -1,25 +1,24 @@
-[MAIN]
+[MASTER]
 # Load import-linter pylint plugin
 load-plugins = importlinter.pylint_plugin
 
-[importlinter]
-# Import-linter configuration file path
-import_linter_config = importlinter.ini
+# Import-linter configuration file path - using example folder configuration
+import-linter-config = example/importlinter.ini
+
+# Target the domains folder for analysis
+import-linter-target-folders = example/domains
 
 # Optional: Specify which contracts to check (defaults to all)
-# import_linter_contracts = contract1,contract2
-
-# Optional: Target specific folders for analysis
-# import_linter_target_folders = src/core,src/domain
+# import-linter-contracts = contract1,contract2
 
 # Optional: Exclude folders from analysis  
-# import_linter_exclude_folders = tests,docs,migrations
+# import-linter-exclude-folders = tests,docs,migrations
 
 # Optional: Custom cache directory
-# import_linter_cache_dir = .custom_cache
+# import-linter-cache-dir = .custom_cache
 
 # Optional: Disable caching
-# import_linter_no_cache = no
+# import-linter-no-cache = no
 
 [MESSAGES CONTROL]
 # Enable import contract violation checks - specific error types for different violations
