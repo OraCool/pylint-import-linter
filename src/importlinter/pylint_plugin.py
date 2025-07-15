@@ -3,6 +3,7 @@ Pylint plugin for import-linter integration.
 
 This plugin allows pylint to enforce import contracts defined in .importlinter configuration files.
 """
+
 from __future__ import annotations
 
 import os
@@ -163,7 +164,9 @@ class ImportLinterChecker(checkers.BaseChecker):
 
             # Read user options and register contract types
             from importlinter.application.use_cases import (
-                read_user_options, create_report, _register_contract_types
+                read_user_options,
+                create_report,
+                _register_contract_types,
             )
 
             user_options = read_user_options(config_filename=config_filename)
@@ -229,9 +232,7 @@ class ImportLinterChecker(checkers.BaseChecker):
                 else:
                     # Fallback to module-level reporting
                     node_for_message = self._first_module_node
-                    violation_msg = format_violation_message(
-                        contract_name, message_id, folder_msg
-                    )
+                    violation_msg = format_violation_message(contract_name, message_id, folder_msg)
 
                     self.add_message(
                         message_id,
@@ -248,24 +249,21 @@ class ImportLinterChecker(checkers.BaseChecker):
         violations = self._parse_violation_details(check_str)
 
         # If that doesn't work, try to access internal violation details
-        if not violations and hasattr(contract_check, '_violations'):
+        if not violations and hasattr(contract_check, "_violations"):
             for violation in contract_check._violations:  # pylint: disable=protected-access
-                if hasattr(violation, 'line_number') and hasattr(violation, 'filename'):
-                    violations.append((
-                        violation.filename,
-                        violation.line_number,
-                        str(violation)
-                    ))
+                if hasattr(violation, "line_number") and hasattr(violation, "filename"):
+                    violations.append((violation.filename, violation.line_number, str(violation)))
 
         return violations
 
     def _parse_violation_details(self, details_str: str) -> list:
         """Parse violation details string to extract line numbers."""
         import re
+
         violations = []
 
         # Look for patterns like "module_name -> other_module (l.6)"
-        pattern = r'(\S+)\s*->\s*(\S+)\s*\(l\.(\d+)\)'
+        pattern = r"(\S+)\s*->\s*(\S+)\s*\(l\.(\d+)\)"
         matches = re.findall(pattern, details_str)
 
         for source_module, target_module, line_num in matches:
@@ -273,15 +271,12 @@ class ImportLinterChecker(checkers.BaseChecker):
             for file_path in self._analyzed_files:
                 # Check if this file corresponds to the source module
                 rel_path = os.path.relpath(file_path)
-                module_path = rel_path.replace('/', '.').replace('.py', '')
-                source_path = source_module.replace('.', '/')
-                if (source_path in rel_path
-                        or module_path.endswith(source_path)):
-                    violations.append((
-                        file_path,
-                        int(line_num),
-                        f"{source_module} -> {target_module}"
-                    ))
+                module_path = rel_path.replace("/", ".").replace(".py", "")
+                source_path = source_module.replace(".", "/")
+                if source_path in rel_path or module_path.endswith(source_path):
+                    violations.append(
+                        (file_path, int(line_num), f"{source_module} -> {target_module}")
+                    )
                     break
 
         return violations
@@ -319,42 +314,46 @@ class ImportLinterChecker(checkers.BaseChecker):
         """Check if an import node violates any contracts."""
         try:
             # Get the module being imported
-            if hasattr(import_node, 'modname') and import_node.modname:
+            if hasattr(import_node, "modname") and import_node.modname:
                 imported_module = import_node.modname
-            elif hasattr(import_node, 'names') and import_node.names:
+            elif hasattr(import_node, "names") and import_node.names:
                 # For regular imports, get the first imported name
                 imported_module = import_node.names[0][0]
             else:
                 return False
 
             # Get the current module path
-            current_file = import_node.root().file if hasattr(import_node.root(), 'file') else ''
+            current_file = import_node.root().file if hasattr(import_node.root(), "file") else ""
             if not current_file:
                 return False
 
             # Convert file path to module path
             rel_path = os.path.relpath(current_file)
-            current_module = rel_path.replace('/', '.').replace('.py', '')
+            current_module = rel_path.replace("/", ".").replace(".py", "")
 
             # Check if this import matches any of the known violations
             # We'll use a simple string matching approach for now
             violations_found = []
 
             # Check document domain boundaries
-            if 'domains.document' in current_module and 'domains.billing' in imported_module:
-                violations_found.append(('Document domain boundaries', 'import-boundary-violation'))
+            if "domains.document" in current_module and "domains.billing" in imported_module:
+                violations_found.append(
+                    ("Document domain boundaries", "import-boundary-violation")
+                )
 
             # Check billing domain boundaries
-            if 'domains.billing' in current_module and 'domains.document' in imported_module:
-                violations_found.append(('Billing domain boundaries', 'import-boundary-violation'))
+            if "domains.billing" in current_module and "domains.document" in imported_module:
+                violations_found.append(("Billing domain boundaries", "import-boundary-violation"))
 
             # Check independence violations
-            document_imports_billing = ('domains.document' in current_module
-                                        and 'domains.billing' in imported_module)
-            billing_imports_document = ('domains.billing' in current_module
-                                        and 'domains.document' in imported_module)
+            document_imports_billing = (
+                "domains.document" in current_module and "domains.billing" in imported_module
+            )
+            billing_imports_document = (
+                "domains.billing" in current_module and "domains.document" in imported_module
+            )
             if document_imports_billing or billing_imports_document:
-                violations_found.append(('Domain independence', 'import-independence-violation'))
+                violations_found.append(("Domain independence", "import-independence-violation"))
 
             return len(violations_found) > 0
 
@@ -365,17 +364,17 @@ class ImportLinterChecker(checkers.BaseChecker):
         """Report a violation for a specific import node."""
         try:
             # Get the module being imported
-            if hasattr(import_node, 'modname') and import_node.modname:
+            if hasattr(import_node, "modname") and import_node.modname:
                 imported_module = import_node.modname
-            elif hasattr(import_node, 'names') and import_node.names:
+            elif hasattr(import_node, "names") and import_node.names:
                 imported_module = import_node.names[0][0]
             else:
                 return
 
             # Get the current module path
-            current_file = import_node.root().file if hasattr(import_node.root(), 'file') else ''
+            current_file = import_node.root().file if hasattr(import_node.root(), "file") else ""
             rel_path = os.path.relpath(current_file)
-            current_module = rel_path.replace('/', '.').replace('.py', '')
+            current_module = rel_path.replace("/", ".").replace(".py", "")
 
             # Determine which violations apply with detailed messages
             folder_msg = ""
@@ -387,12 +386,12 @@ class ImportLinterChecker(checkers.BaseChecker):
             import_details = f"'{current_module}' imports '{imported_module}'"
 
             # Report boundary violation - Document domain
-            if 'domains.document' in current_module and 'domains.billing' in imported_module:
+            if "domains.document" in current_module and "domains.billing" in imported_module:
                 violation_msg = format_violation_message(
-                    'Document domain boundaries',
+                    "Document domain boundaries",
                     IMPORT_BOUNDARY_VIOLATION,
                     folder_msg,
-                    f"{import_details} (document domain cannot import from billing domain)"
+                    f"{import_details} (document domain cannot import from billing domain)",
                 )
                 self.add_message(
                     IMPORT_BOUNDARY_VIOLATION,
@@ -402,12 +401,12 @@ class ImportLinterChecker(checkers.BaseChecker):
                 )
 
             # Report boundary violation - Billing domain
-            if 'domains.billing' in current_module and 'domains.document' in imported_module:
+            if "domains.billing" in current_module and "domains.document" in imported_module:
                 violation_msg = format_violation_message(
-                    'Billing domain boundaries',
+                    "Billing domain boundaries",
                     IMPORT_BOUNDARY_VIOLATION,
                     folder_msg,
-                    f"{import_details} (billing domain cannot import from document domain)"
+                    f"{import_details} (billing domain cannot import from document domain)",
                 )
                 self.add_message(
                     IMPORT_BOUNDARY_VIOLATION,
@@ -417,17 +416,19 @@ class ImportLinterChecker(checkers.BaseChecker):
                 )
 
             # Report independence violation
-            document_imports_billing = ('domains.document' in current_module
-                                        and 'domains.billing' in imported_module)
-            billing_imports_document = ('domains.billing' in current_module
-                                        and 'domains.document' in imported_module)
+            document_imports_billing = (
+                "domains.document" in current_module and "domains.billing" in imported_module
+            )
+            billing_imports_document = (
+                "domains.billing" in current_module and "domains.document" in imported_module
+            )
 
             if document_imports_billing or billing_imports_document:
                 violation_msg = format_violation_message(
-                    'Domain independence',
+                    "Domain independence",
                     IMPORT_INDEPENDENCE_VIOLATION,
                     folder_msg,
-                    f"{import_details} (domains must be independent of each other)"
+                    f"{import_details} (domains must be independent of each other)",
                 )
                 self.add_message(
                     IMPORT_INDEPENDENCE_VIOLATION,
@@ -446,7 +447,7 @@ class ImportLinterChecker(checkers.BaseChecker):
             self._first_module_node = node
 
         # Track the file path for folder-based filtering and store module nodes
-        if hasattr(node, 'file') and node.file:
+        if hasattr(node, "file") and node.file:
             self._analyzed_files.add(node.file)
             self._module_nodes[node.file] = node
 

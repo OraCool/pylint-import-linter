@@ -1,6 +1,7 @@
 """
 Enhanced output adapter for capturing import-linter violations in pylint plugin.
 """
+
 from __future__ import annotations
 
 from typing import List, Tuple, Optional
@@ -44,11 +45,7 @@ class SilentPrinter(ClickPrinter):
         self.output_adapter = output_adapter
 
     def print(
-        self,
-        text: str = "",
-        bold: bool = False,
-        color: Optional[str] = None,
-        newline: bool = True
+        self, text: str = "", bold: bool = False, color: Optional[str] = None, newline: bool = True
     ) -> None:
         """Override print to capture instead of printing."""
         # We don't print anything, just capture

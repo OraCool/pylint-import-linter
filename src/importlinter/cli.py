@@ -10,7 +10,7 @@ from importlinter.application.sentinels import NotSupplied
 from importlinter.application.formatters import (
     format_report_as_json,
     format_report_as_json2,
-    should_use_json_output
+    should_use_json_output,
 )
 
 from . import configuration
@@ -152,7 +152,9 @@ def lint_imports(
     if should_use_json_output(output_format):
         # For JSON output, we need the detailed report
         from importlinter.application.use_cases import (
-            read_user_options, create_report, _register_contract_types
+            read_user_options,
+            create_report,
+            _register_contract_types,
         )
 
         try:
@@ -198,7 +200,7 @@ def lint_imports(
                             "endLine": None,
                             "endColumn": None,
                             "path": "",
-                            "absolutePath": ""
+                            "absolutePath": "",
                         }
                     ],
                     "statistics": {
@@ -208,16 +210,16 @@ def lint_imports(
                             "warning": 0,
                             "refactor": 0,
                             "convention": 0,
-                            "info": 0
+                            "info": 0,
                         },
                         "modulesLinted": 0,
-                        "score": 0.0
-                    }
+                        "score": 0.0,
+                    },
                 }
             else:  # json
                 error_output = {
                     "error": str(e),
-                    "summary": {"has_violations": True, "error": True}
+                    "summary": {"has_violations": True, "error": True},
                 }
             click.echo(json.dumps(error_output, indent=2))
             return EXIT_STATUS_ERROR
