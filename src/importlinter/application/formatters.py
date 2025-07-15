@@ -6,6 +6,7 @@ with CI/CD systems and automated tooling.
 """
 
 import json
+from typing import Any
 
 from importlinter.application.constants import (
     get_message_id_for_contract_type,
@@ -13,14 +14,14 @@ from importlinter.application.constants import (
 )
 
 
-def format_report_as_json(report, folder_info: str = "") -> str:
+def format_report_as_json(report: Any, folder_info: str = "") -> str:
     """
     Format an import-linter report as JSON output.
 
     This provides structured output compatible with the pylint plugin format
     for consistent tooling integration.
     """
-    result = {
+    result: dict[str, Any] = {
         "summary": {
             "analyzed_files": getattr(report, "number_of_modules", 0),
             "dependencies": getattr(report, "number_of_dependencies", 0),
@@ -78,15 +79,15 @@ def format_report_as_json(report, folder_info: str = "") -> str:
     return json.dumps(result, indent=2)
 
 
-def format_report_as_json2(report, folder_info: str = "") -> str:
+def format_report_as_json2(report: Any, folder_info: str = "") -> str:
     """
     Format an import-linter report as JSON2 output (improved format with statistics).
 
     This provides structured output compatible with pylint's json2 format,
     including statistics and enhanced message structure.
     """
-    messages = []
-    statistics = {
+    messages: list[dict[str, Any]] = []
+    statistics: dict[str, Any] = {
         "messageTypeCount": {
             "fatal": 0,
             "error": 0,

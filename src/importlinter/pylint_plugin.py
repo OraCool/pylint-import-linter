@@ -25,7 +25,7 @@ from importlinter.application.constants import (
 )
 
 if TYPE_CHECKING:
-    from astroid import nodes
+    from astroid import nodes  # type: ignore[import-untyped]
 
 # Configure import-linter
 configure()
