@@ -5,11 +5,19 @@ from grimp import ImportGraph
 
 
 class Reporter:
-    ...
+    """Base class for reporting contract violations."""
+
+    def report(self, report):
+        """Report contract violations."""
+        raise NotImplementedError
 
 
 class ExceptionReporter:
-    ...
+    """Base class for reporting exceptions during contract checking."""
+
+    def report_exception(self, exception):
+        """Report an exception that occurred during contract checking."""
+        raise NotImplementedError
 
 
 class Report:
