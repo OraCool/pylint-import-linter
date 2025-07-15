@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Any
 
 from pylint import checkers
 from pylint.lint import PyLinter
@@ -34,7 +34,7 @@ class ImportLinterChecker(checkers.BaseChecker):
     """Pylint checker that enforces import-linter contracts."""
 
     name = "import-linter"
-    msgs = MESSAGES
+    msgs = MESSAGES  # type: ignore[assignment]
 
     # Options for the checker
     options = (
@@ -98,10 +98,10 @@ class ImportLinterChecker(checkers.BaseChecker):
         super().__init__(linter)
         self._contracts_checked = False
         self._first_module_node = None
-        self._analyzed_files = set()
-        self._module_nodes = {}  # Store module nodes by file path for line-specific reporting
-        self._import_nodes = []  # Store import nodes for line-specific reporting
-        self._contracts_cache = None  # Cache contracts for import checking
+        self._analyzed_files: set[str] = set()
+        self._module_nodes: dict[str, Any] = {}  # Store module nodes by file path
+        self._import_nodes: list[Any] = []  # Store import nodes for line-specific reporting
+        self._contracts_cache: Any = None  # Cache contracts for import checking
 
     def open(self) -> None:
         """Called when the checker is opened."""
@@ -192,6 +192,14 @@ class ImportLinterChecker(checkers.BaseChecker):
                 args=(str(e),),
                 node=node_for_message,
             )
+        except Exception as e:  # pylint: disable=broad-except
+            # Handle any other unexpected errors during contract checking
+            node_for_message = self._first_module_node
+            self.add_message(
+                IMPORT_CONTRACT_ERROR,
+                args=(f"Unexpected error: {str(e)}",),
+                node=node_for_message,
+            )
 
     def _process_contract_violations(self, report, folder_msg: str) -> None:
         """Process contract violations and report them at specific lines when possible."""
@@ -241,7 +249,7 @@ class ImportLinterChecker(checkers.BaseChecker):
 
         # If that doesn't work, try to access internal violation details
         if not violations and hasattr(contract_check, '_violations'):
-            for violation in contract_check._violations:
+            for violation in contract_check._violations:  # pylint: disable=protected-access
                 if hasattr(violation, 'line_number') and hasattr(violation, 'filename'):
                     violations.append((
                         violation.filename,
@@ -350,7 +358,7 @@ class ImportLinterChecker(checkers.BaseChecker):
 
             return len(violations_found) > 0
 
-        except Exception:
+        except (AttributeError, TypeError, ValueError):
             return False
 
     def _report_import_violation(self, import_node) -> None:
@@ -428,7 +436,7 @@ class ImportLinterChecker(checkers.BaseChecker):
                     line=import_node.lineno,
                 )
 
-        except Exception:
+        except (AttributeError, TypeError, ValueError):
             pass  # Silently ignore errors in reporting
 
     # We need at least one visit method for the checker to be active
