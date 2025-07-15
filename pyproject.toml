@@ -5,15 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pylint-import-linter"
 version = "1.0.0"
-license = {text = "BSD 2-Clause License"}
+license = "BSD-2-Clause"
 description = "Enforces rules for the imports within and between Python packages."
 authors = [
     {name = "David Seddon", email = "david@seddonym.me"},
     {name = "Siarhei Skuratovich", email = "sOraCool@gmail.com"},
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = [
-    "click>=8.2.1",
+    "click>=8.0.0,<8.2.0; python_version < '3.10'",
+    "click>=8.2.1; python_version >= '3.10'",
     "grimp>=3.9",
     "tomli>=2.2.1; python_version < '3.11'",
     "typing-extensions>=4.14.1",
@@ -22,7 +23,6 @@ dependencies = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: Unix",
     "Operating System :: POSIX",
     "Operating System :: Microsoft :: Windows",
@@ -84,4 +84,5 @@ dev-dependencies = [
     "black>=22.0.0",
     "mypy>=1.0.0",
     "pyyaml>=6.0.2",
+    "build>=1.2.2.post1",
 ]
