@@ -8,10 +8,16 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import TYPE_CHECKING, Union, Any
+from typing import Union, Any
 
 from pylint import checkers
 from pylint.lint import PyLinter
+
+# Import astroid outside TYPE_CHECKING to avoid mypy version conflicts
+try:
+    from astroid import nodes
+except ImportError:
+    nodes = None
 
 from importlinter.application.sentinels import NotSupplied
 from importlinter.configuration import configure
@@ -23,9 +29,6 @@ from importlinter.application.constants import (
     format_violation_message,
     get_message_id_for_contract_type,
 )
-
-if TYPE_CHECKING:
-    from astroid import nodes  # type: ignore[import-untyped]
 
 # Configure import-linter
 configure()
