@@ -53,8 +53,9 @@ MESSAGES = {
 }
 
 
-def format_violation_message(contract_name: str, message_id: str, folder_info: str = "",
-                             violation_details: str = "") -> str:
+def format_violation_message(
+    contract_name: str, message_id: str, folder_info: str = "", violation_details: str = ""
+) -> str:
     """
     Generate a standardized violation message for both CLI and pylint plugin.
 

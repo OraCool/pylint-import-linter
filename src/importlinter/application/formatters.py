@@ -4,6 +4,7 @@ Output formatters for import-linter CLI.
 Provides different output formats including text and JSON for better integration
 with CI/CD systems and automated tooling.
 """
+
 import json
 
 from importlinter.application.constants import (
@@ -21,8 +22,8 @@ def format_report_as_json(report, folder_info: str = "") -> str:
     """
     result = {
         "summary": {
-            "analyzed_files": getattr(report, 'number_of_modules', 0),
-            "dependencies": getattr(report, 'number_of_dependencies', 0),
+            "analyzed_files": getattr(report, "number_of_modules", 0),
+            "dependencies": getattr(report, "number_of_dependencies", 0),
             "contracts_total": len(list(report.get_contracts_and_checks())),
             "contracts_kept": 0,
             "contracts_broken": 0,
@@ -54,20 +55,20 @@ def format_report_as_json(report, folder_info: str = "") -> str:
                 "symbol": message_id,
                 "contract_name": contract.name,
                 "contract_type": contract_type,
-                "message": format_violation_message(
-                    contract.name, contract_type, folder_info
-                ),
+                "message": format_violation_message(contract.name, contract_type, folder_info),
                 "details": [],
             }
 
             # Add specific violation details if available
-            if hasattr(contract_check, 'metadata') and contract_check.metadata:
-                if 'invalid_chains' in contract_check.metadata:
-                    for chain in contract_check.metadata['invalid_chains']:
-                        violation["details"].append({
-                            "import_chain": str(chain),
-                            "line_number": getattr(chain, 'line_number', None),
-                        })
+            if hasattr(contract_check, "metadata") and contract_check.metadata:
+                if "invalid_chains" in contract_check.metadata:
+                    for chain in contract_check.metadata["invalid_chains"]:
+                        violation["details"].append(
+                            {
+                                "import_chain": str(chain),
+                                "line_number": getattr(chain, "line_number", None),
+                            }
+                        )
 
             result["violations"].append(violation)
             contract_info["violation"] = violation
@@ -92,10 +93,10 @@ def format_report_as_json2(report, folder_info: str = "") -> str:
             "warning": 0,
             "refactor": 0,
             "convention": 0,
-            "info": 0
+            "info": 0,
         },
-        "modulesLinted": getattr(report, 'number_of_modules', 0),
-        "score": 10.0 if report.passed else 0.0
+        "modulesLinted": getattr(report, "number_of_modules", 0),
+        "score": 10.0 if report.passed else 0.0,
     }
 
     # Process contracts and violations
@@ -109,9 +110,7 @@ def format_report_as_json2(report, folder_info: str = "") -> str:
             message = {
                 "type": "error",
                 "symbol": message_id,
-                "message": format_violation_message(
-                    contract.name, message_id, folder_info
-                ),
+                "message": format_violation_message(contract.name, message_id, folder_info),
                 "messageId": "E9001",  # Generic import contract violation
                 "confidence": "HIGH",
                 "module": contract.name,
@@ -121,7 +120,7 @@ def format_report_as_json2(report, folder_info: str = "") -> str:
                 "endLine": None,
                 "endColumn": None,
                 "path": contract.name,
-                "absolutePath": contract.name
+                "absolutePath": contract.name,
             }
 
             # Map specific contract types to appropriate message IDs
@@ -135,10 +134,7 @@ def format_report_as_json2(report, folder_info: str = "") -> str:
             messages.append(message)
             statistics["messageTypeCount"]["error"] += 1
 
-    result = {
-        "messages": messages,
-        "statistics": statistics
-    }
+    result = {"messages": messages, "statistics": statistics}
 
     return json.dumps(result, indent=2)
 

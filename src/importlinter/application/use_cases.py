@@ -210,8 +210,7 @@ def _build_report(
     # CLI folder filtering will be implemented in a future version
     if target_folders or exclude_folders:
         output.verbose_print(
-            verbose,
-            "Note: Folder filtering is currently supported only in the pylint plugin"
+            verbose, "Note: Folder filtering is currently supported only in the pylint plugin"
         )
 
     contracts_options = _filter_contract_options(
