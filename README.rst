@@ -17,13 +17,89 @@ Import Linter allows you to define and enforce rules for the imports within and 
 
 * Free software: BSD license
 * Documentation: https://import-linter.readthedocs.io.
+* **NEW**: Pylint plugin for seamless integration!
+
+## Features
+
+- **Command Line Tool**: Standalone import linting
+- **Pylint Plugin**: Integrated architecture checking within pylint workflow  
+- **Folder-Specific Targeting**: Configure checking for particular folders only
+- **Multiple Contract Types**: layers, forbidden imports, independence
+- **Flexible Configuration**: TOML and INI support
+- **CI/CD Ready**: Perfect for continuous integration
+
+## Installation
+
+Install Import Linter::
+
+    pip install import-linter
+
+## Quick Start
+
+### Standalone Usage
+Run the standalone command line tool::
+
+    lint-imports
+
+### Pylint Plugin Integration
+
+Import Linter can be integrated into your pylint workflow for seamless architecture checking.
+
+**Command Line Usage:**
+
+.. code-block:: bash
+
+    # Load the plugin and run pylint
+    pylint --load-plugins=importlinter.pylint_plugin src/
+
+**Permanent Integration in pyproject.toml:**
+
+.. code-block:: toml
+
+    [tool.pylint.main]
+    load-plugins = ["importlinter.pylint_plugin"]
+
+**Permanent Integration in .pylintrc:**
+
+.. code-block:: ini
+
+    [MAIN]
+    load-plugins=importlinter.pylint_plugin
+
+**Folder-Specific Checking:**
+
+Target specific folders for large codebases or gradual adoption:
+
+.. code-block:: bash
+
+    # Only check core modules
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-target-folders=src/core,src/api \
+           src/
+
+    # Exclude test and documentation folders
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-exclude-folders=tests,docs \
+           src/
+
+**IDE Integration:**
+Most IDEs that support pylint will automatically pick up the plugin when configured in your project settings.
+
+See the `documentation <https://import-linter.readthedocs.io/>`_ for complete plugin documentation and advanced configuration options.
+
+For folder-specific configuration and advanced targeting examples, see the documentation.
 
 Overview
 --------
 
-Import Linter is a command line tool to check that you are following a self-imposed
+Import Linter is a command line tool and pylint plugin to check that you are following a self-imposed
 architecture within your Python project. It does this by analysing the imports between all the modules in one
 or more Python packages, and compares this against a set of rules that you provide in a configuration file.
+
+The tool can be used in two ways:
+
+1. **Standalone CLI tool**: Run ``lint-imports`` as a separate command
+2. **Pylint plugin**: Integrate architecture checking into your existing pylint workflow
 
 The configuration file contains one or more 'contracts'. Each contract has a specific
 type, which determines the sort of rules it will apply. For example, the ``forbidden``
@@ -65,9 +141,19 @@ Create an ``.importlinter`` file in the root of your project to define your cont
         myproject.bar
         myproject.baz
 
-Now, from your project root, run::
+**Option 1: Standalone Usage**
+
+From your project root, run::
 
     lint-imports
+
+**Option 2: Pylint Plugin Usage**
+
+Run with pylint to integrate into your existing linting workflow::
+
+    pylint --load-plugins=importlinter.pylint_plugin src/
+
+Or configure permanently in your project (see Installation section above).
 
 If your code violates the contract, you will see an error message something like this:
 
@@ -101,3 +187,48 @@ If your code violates the contract, you will see an error message something like
     -   myproject.foo.blue -> myproject.utils.red (l.16)
         myproject.utils.red -> myproject.utils.green (l.1)
         myproject.utils.green -> myproject.bar.yellow (l.3)
+
+
+CI/CD Integration
+-----------------
+
+**GitHub Actions Example:**
+
+.. code-block:: yaml
+
+    name: Lint
+    on: [push, pull_request]
+    jobs:
+      lint:
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-python@v4
+          with:
+            python-version: '3.11'
+        - run: pip install import-linter pylint
+        - run: pylint --load-plugins=importlinter.pylint_plugin src/
+
+**Pre-commit Hook:**
+
+.. code-block:: yaml
+
+    repos:
+    - repo: local
+      hooks:
+      - id: import-linter-pylint
+        name: Import Linter (Pylint Plugin)
+        entry: pylint
+        args: [--load-plugins=importlinter.pylint_plugin]
+        language: system
+        types: [python]
+
+**Makefile Integration:**
+
+.. code-block:: make
+
+    lint:
+    	pylint --load-plugins=importlinter.pylint_plugin src/
+    
+    lint-standalone:
+    	lint-imports

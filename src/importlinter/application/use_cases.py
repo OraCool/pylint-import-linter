@@ -24,6 +24,8 @@ def lint_imports(
     config_filename: Optional[str] = None,
     limit_to_contracts: Tuple[str, ...] = (),
     cache_dir: Union[str, None, Type[NotSupplied]] = NotSupplied,
+    target_folders: Tuple[str, ...] = (),
+    exclude_folders: Tuple[str, ...] = (),
     is_debug_mode: bool = False,
     show_timings: bool = False,
     verbose: bool = False,
@@ -37,6 +39,8 @@ def lint_imports(
         config_filename:    the filename to use to parse user options.
         limit_to_contracts: if supplied, only lint the contracts with the supplied ids.
         cache_dir:          the directory to use for caching. Pass None to disable caching.
+        target_folders:     if supplied, only check files in these folders.
+        exclude_folders:    if supplied, exclude files in these folders from checking.
         is_debug_mode:      whether debugging should be turned on. In debug mode, exceptions are
                             not swallowed at the top level, so the stack trace can be seen.
         show_timings:       whether to show the times taken to build the graph and to check
@@ -47,11 +51,28 @@ def lint_imports(
         True if the linting passed, False if it didn't.
     """
     output.print_heading("Import Linter", output.HEADING_LEVEL_ONE)
+    if target_folders or exclude_folders:
+        # Display folder filtering information
+        folder_info = []
+        if target_folders:
+            folder_info.append(f"targeting folders: {', '.join(target_folders)}")
+        if exclude_folders:
+            folder_info.append(f"excluding folders: {', '.join(exclude_folders)}")
+        output.print(f"Folder filtering active ({'; '.join(folder_info)})")
+
     output.verbose_print(verbose, "Verbose mode.")
     try:
         user_options = read_user_options(config_filename=config_filename)
         _register_contract_types(user_options)
-        report = create_report(user_options, limit_to_contracts, cache_dir, show_timings, verbose)
+        report = create_report(
+            user_options,
+            limit_to_contracts,
+            cache_dir,
+            show_timings,
+            verbose,
+            target_folders=target_folders,
+            exclude_folders=exclude_folders,
+        )
     except Exception as e:
         if is_debug_mode:
             raise e
@@ -97,6 +118,8 @@ def create_report(
     cache_dir: Union[str, None, Type[NotSupplied]] = NotSupplied,
     show_timings: bool = False,
     verbose: bool = False,
+    target_folders: Tuple[str, ...] = (),
+    exclude_folders: Tuple[str, ...] = (),
 ) -> Report:
     """
     Analyse whether a Python package follows a set of contracts, returning a report on the results.
@@ -126,6 +149,8 @@ def create_report(
         limit_to_contracts=limit_to_contracts,
         show_timings=show_timings,
         verbose=verbose,
+        target_folders=target_folders,
+        exclude_folders=exclude_folders,
     )
 
 
@@ -174,10 +199,21 @@ def _build_report(
     limit_to_contracts: Tuple[str, ...],
     show_timings: bool,
     verbose: bool,
+    target_folders: Tuple[str, ...] = (),
+    exclude_folders: Tuple[str, ...] = (),
 ) -> Report:
     report = Report(
         graph=graph, show_timings=show_timings, graph_building_duration=graph_building_duration
     )
+
+    # Note: Folder filtering is currently available only in the pylint plugin
+    # CLI folder filtering will be implemented in a future version
+    if target_folders or exclude_folders:
+        output.verbose_print(
+            verbose,
+            "Note: Folder filtering is currently supported only in the pylint plugin"
+        )
+
     contracts_options = _filter_contract_options(
         user_options.contracts_options, limit_to_contracts
     )

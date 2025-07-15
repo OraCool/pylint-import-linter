@@ -8,6 +8,8 @@ Contents
    readme
    installation
    usage
+   pylint_plugin
+   folder_targeting
    api
    contract_types
    custom_contract_types

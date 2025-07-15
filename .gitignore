@@ -76,3 +76,5 @@ pip-wheel-metadata
 .history/
 
 */pyvenv.cfg
+.venv
+.*cache
