@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pylint-import-linter"
-version = "1.0.0"
+version = "1.0.1"
 license = "BSD-2-Clause"
 description = "Enforces rules for the imports within and between Python packages."
 authors = [
