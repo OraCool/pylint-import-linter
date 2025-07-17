@@ -10,10 +10,12 @@
 ## Pre-Release Checklist
 
 ### 1. Code Quality Checks
-- [ ] Run linting: `uv run pylint --load-plugins=importlinter.pylint_plugin src/`
-- [ ] Run tests: `uv run pytest`
-- [ ] Run import-linter on itself: `uv run lint-imports`
-- [ ] Test plugin functionality: `uv run pylint --load-plugins=importlinter.pylint_plugin --import-linter-debug=yes --import-linter-verbose=yes example/domains/document/document_operations_violations.py`
+- [x] Run linting: `uv run pylint --load-plugins=importlinter.pylint_plugin src/`
+- [x] Run tests: `uv run pytest`
+- [x] Run import-linter on itself: `uv run lint-imports`
+- [x] Test plugin functionality: `uv run pylint --load-plugins=importlinter.pylint_plugin --import-linter-debug=yes --import-linter-verbose=yes example/domains/document/document_operations_violations.py`
+- [x] Fix Black formatting issues: `uv run black src/`
+- [x] Add missing type stubs: `uv add types-PyYAML`
 
 ### 2. Documentation Verification
 - [ ] Verify all documentation files are updated
