@@ -1,38 +1,69 @@
-=============
-Import Linter
-=============
+===============================
+Pylint Import Linter (Enhanced)
+===============================
 
-.. image:: https://img.shields.io/pypi/v/import-linter.svg
-    :target: https://pypi.org/project/import-linter
+.. image:: https://img.shields.io/pypi/v/pylint-import-linter.svg
+    :target: https://pypi.org/project/pylint-import-linter
 
-.. image:: https://img.shields.io/pypi/pyversions/import-linter.svg
+.. image:: https://img.shields.io/pypi/pyversions/pylint-import-linter.svg
     :alt: Python versions
-    :target: https://pypi.org/project/import-linter/
+    :target: https://pypi.org/project/pylint-import-linter/
 
-.. image:: https://github.com/seddonym/import-linter/workflows/CI/badge.svg?branch=master
-     :target: https://github.com/seddonym/import-linter/actions?workflow=CI
-     :alt: CI Status
+**Enhanced Import Linter with Advanced Pylint Integration**
+
+This is an enhanced version of Import Linter that extends the original `import-linter <https://import-linter.readthedocs.io/>`_ with advanced pylint integration, debug capabilities, and developer tools.
+
+**Key Enhancements:**
+- **Advanced Pylint Plugin**: Enhanced integration with unified parameter interface
+- **Debug Mode**: Detailed error reporting with stack traces
+- **Verbose Mode**: Real-time analysis progress and timing information
+- **VS Code Integration**: Comprehensive tasks, launch configurations, and settings
+- **Single File Analysis**: Targeted debugging support
+- **Parameter Unification**: Consistent interface between CLI and plugin
 
 Import Linter allows you to define and enforce rules for the imports within and between Python packages.
 
 * Free software: BSD license
-* Documentation: https://import-linter.readthedocs.io.
-* **NEW**: Pylint plugin for seamless integration!
+* Based on original import-linter with significant enhancements
+* **NEW**: Enhanced Pylint plugin with debug capabilities!
 
 ## Features
 
-- **Command Line Tool**: Standalone import linting
-- **Pylint Plugin**: Integrated architecture checking within pylint workflow  
+- **Command Line Tool**: Standalone import linting (compatible with original import-linter)
+- **Enhanced Pylint Plugin**: Advanced integration with debug and verbose modes
+- **Debug Mode**: Stack traces, detailed error messages, and diagnostic information
+- **Verbose Mode**: Real-time analysis progress and timing information
+- **Single File Analysis**: Targeted debugging for specific files
+- **VS Code Integration**: Comprehensive tasks, launch configurations, and settings
 - **Folder-Specific Targeting**: Configure checking for particular folders only
 - **Multiple Contract Types**: layers, forbidden imports, independence
+- **Parameter Unification**: Consistent interface between CLI and plugin
 - **Flexible Configuration**: TOML and INI support
 - **CI/CD Ready**: Perfect for continuous integration
 
+## Relationship to Original Import-Linter
+
+This project extends the original `import-linter <https://import-linter.readthedocs.io/>`_ (version 2.3) with significant enhancements:
+
+**What's New in This Version:**
+- Enhanced pylint plugin with unified parameter interface
+- Debug mode with stack traces and detailed error reporting
+- Verbose mode with real-time analysis progress
+- Single file analysis capabilities
+- Comprehensive VS Code integration
+- Parameter consistency between CLI and plugin
+- Performance monitoring and timing information
+
+**Compatibility:**
+- Fully compatible with existing import-linter configuration files
+- All original CLI commands work as before
+- Seamless migration from original import-linter
+
 ## Installation
 
-Install Import Linter::
+Install the enhanced Pylint Import Linter::
 
-    pip install import-linter
+    pip install pylint-import-linter
 
 ## Quick Start
 

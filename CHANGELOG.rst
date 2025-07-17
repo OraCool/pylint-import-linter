@@ -1,25 +1,58 @@
 Changelog
 =========
 
-latest
-------
-- **NEW**: Enhanced Pylint plugin with unified parameter interface
-- **NEW**: Debug mode support with detailed error reporting and stack traces
-- **NEW**: Verbose mode support with real-time analysis progress
-- **NEW**: Timing information support for performance monitoring
-- **NEW**: Unified parameter names between CLI and plugin (--import-linter- prefix)
-- **NEW**: Single file analysis support for targeted debugging
-- **NEW**: Comprehensive VS Code integration with tasks and launch configurations
-- **NEW**: Enhanced error handling with detailed diagnostic information
-- **IMPROVED**: Parameter consistency across CLI and plugin interfaces
-- **IMPROVED**: Documentation with debug mode examples and VS Code setup
-- Fix incorrect handling of unicode characters in TOML files on Windows.
-- Changed pre-commit hook to use the system virtualenv and to run whenever
-  any file changes, not just a Python file.
-- Fix RecursionError when running repr on a ModuleExpression.
+1.1.0 (2025-07-17)
+------------------
 
-2.3 (2025-03-11)
-----------------
+**Enhanced Debug and Verbose Features**
+
+**New Features:**
+- **Debug Mode**: Enhanced error reporting with stack traces and detailed diagnostic information
+- **Verbose Mode**: Real-time analysis progress with contract details and timing information
+- **Single File Analysis**: Targeted debugging support for specific files with full diagnostic mode
+- **VS Code Integration**: Comprehensive tasks, launch configurations, and debug settings
+- **Parameter Unification**: Unified parameter names between CLI and plugin (--import-linter- prefix)
+- **Performance Monitoring**: Timing information and cache management options
+- **Enhanced Error Handling**: Detailed diagnostic messages with file paths and line numbers
+
+**Improvements:**
+- **Parameter Consistency**: All plugin parameters now use consistent --import-linter- prefix
+- **Documentation**: Comprehensive documentation with debug mode examples and VS Code setup
+- **Error Messages**: Enhanced error reporting with full context and stack traces
+- **Developer Experience**: Improved debugging workflow with VS Code integration
+
+**Usage Examples:**
+- Full debug mode: `--import-linter-debug=yes --import-linter-verbose=yes --import-linter-show-timings=yes`
+- Single file analysis with debug information
+- VS Code tasks for quick debugging and analysis
+- Enhanced error reporting for configuration issues
+
+1.0.0 (2025-07-17)
+------------------
+
+**Initial Release of pylint-import-linter**
+
+This is a new project that extends the original import-linter with enhanced pylint integration and debugging capabilities.
+
+**New Features:**
+- **Enhanced Pylint Plugin**: Unified parameter interface with --import-linter- prefix
+- **Debug Mode**: Detailed error reporting with stack traces and diagnostic information
+- **Verbose Mode**: Real-time analysis progress with contract details and timing
+- **Single File Analysis**: Targeted debugging support for specific files
+- **VS Code Integration**: Comprehensive tasks, launch configurations, and settings
+- **Parameter Unification**: Consistent interface between CLI and plugin
+- **Performance Monitoring**: Timing information and cache management
+- **Enhanced Error Handling**: Detailed diagnostic messages with file paths and line numbers
+
+**Based on import-linter 2.3 with additional features:**
+
+Original import-linter Changelog
+=================================
+
+The following versions are from the original import-linter project that this tool extends:
+
+2.3 (2025-03-11) - Original import-linter
+-----------------------------------------
 
 * Add as_packages field to forbidden contracts.
 * Improve performance of parsing module / import expressions.
