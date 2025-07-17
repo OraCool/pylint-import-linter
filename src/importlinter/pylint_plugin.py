@@ -96,6 +96,24 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "help": "Disable import-linter caching",
             },
         ),
+        (
+            "import-linter-verbose",
+            {
+                "default": False,
+                "type": "yn",
+                "metavar": "<y or n>",
+                "help": "Enable verbose output showing what's being analyzed",
+            },
+        ),
+        (
+            "import-linter-show-timings",
+            {
+                "default": False,
+                "type": "yn",
+                "metavar": "<y or n>",
+                "help": "Show timing information for graph building and contract checking",
+            },
+        ),
     )
 
     def __init__(self, linter: PyLinter) -> None:
@@ -164,6 +182,17 @@ class ImportLinterChecker(checkers.BaseChecker):
             config_filename = self.linter.config.import_linter_config
             limit_to_contracts = tuple(self.linter.config.import_linter_contracts or ())
             cache_dir = self._get_cache_dir()
+            verbose = self.linter.config.import_linter_verbose
+            show_timings = self.linter.config.import_linter_show_timings
+
+            if verbose:
+                print(f"Import-linter: Analyzing contracts in {config_filename}")
+                if limit_to_contracts:
+                    print(f"Import-linter: Limited to contracts: {', '.join(limit_to_contracts)}")
+                if cache_dir:
+                    print(f"Import-linter: Using cache directory: {cache_dir}")
+                else:
+                    print("Import-linter: Cache disabled")
 
             # Read user options and register contract types
             from importlinter.application.use_cases import (
@@ -175,14 +204,31 @@ class ImportLinterChecker(checkers.BaseChecker):
             user_options = read_user_options(config_filename=config_filename)
             _register_contract_types(user_options)
 
+            if verbose:
+                print(f"Import-linter: Found {len(user_options.contracts_options)} contracts")
+                for i, contract_options in enumerate(user_options.contracts_options, 1):
+                    name = contract_options.get('name', f'Contract {i}')
+                    contract_type = contract_options.get('type', 'unknown')
+                    print(f"Import-linter: Contract {i}: {name} (type: {contract_type})")
+
             # Create detailed report instead of just checking pass/fail
             report = create_report(
                 user_options=user_options,
                 limit_to_contracts=limit_to_contracts,
                 cache_dir=cache_dir,
-                show_timings=False,
-                verbose=False,
+                show_timings=show_timings,
+                verbose=verbose,
             )
+
+            if verbose:
+                print(f"Import-linter: Analysis complete. Found {len(report.contracts)} results")
+                for contract in report.contracts:
+                    check = report._check_map.get(contract)
+                    if check:
+                        status = "BROKEN" if not check.kept else "KEPT"
+                        print(f"Import-linter: {contract.name}: {status}")
+                    else:
+                        print(f"Import-linter: {contract.name}: No check result")
 
             if report.contains_failures:
                 # Store contracts for individual import checking

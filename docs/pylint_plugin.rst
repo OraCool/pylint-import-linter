@@ -80,6 +80,8 @@ The plugin supports all import-linter configuration options::
 - ``--import-linter-exclude-folders``: Comma-separated list of folders to exclude from checking
 - ``--import-linter-cache-dir``: Directory for caching (default: ``.import_linter_cache``)
 - ``--import-linter-no-cache``: Disable caching
+- ``--import-linter-verbose``: Enable verbose output showing what's being analyzed
+- ``--import-linter-show-timings``: Show timing information for graph building and contract checking
 
 Folder-Based Configuration
 --------------------------
@@ -362,7 +364,23 @@ Debug Mode
 
 Run with verbose output for debugging::
 
-    pylint --load-plugins=importlinter.pylint_plugin --verbose src/
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-verbose=yes \
+           src/
+
+Show what's being analyzed with timing information::
+
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-verbose=yes \
+           --import-linter-show-timings=yes \
+           src/
+
+The verbose output will show:
+- Configuration file being used
+- Cache directory location
+- List of contracts being checked
+- Analysis progress and results
+- Timing information for each step
 
 Performance Tuning
 -------------------
