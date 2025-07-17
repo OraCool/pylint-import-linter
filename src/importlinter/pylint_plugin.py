@@ -375,65 +375,71 @@ class ImportLinterChecker(checkers.BaseChecker):
         return NotSupplied
 
     def _get_module_path_from_file(self, file_path: str) -> str:
-        """Convert a file path to a module path based on import-linter configuration."""
+        """Convert file path to proper module path respecting PYTHONPATH."""
         if not file_path:
             return ""
 
         debug = self.linter.config.import_linter_debug
-
-        # Get target folders from configuration
         target_folders = self.linter.config.import_linter_target_folders or ()
 
-        # Convert file path to relative path
-        rel_path = os.path.relpath(file_path)
+        # Get relative path from workspace root
+        rel_path = os.path.relpath(file_path, os.getcwd())
 
         if debug:
             print(f"Debug: _get_module_path_from_file: file_path={file_path}")
             print(f"Debug: _get_module_path_from_file: rel_path={rel_path}")
             print(f"Debug: _get_module_path_from_file: target_folders={target_folders}")
 
-        # If we have target folders, use them to determine the module root
-        if target_folders:
-            for target_folder in target_folders:
-                # Normalize the target folder path
-                target_folder = target_folder.rstrip("/")
+        # Remove file extension
+        if rel_path.endswith('.py'):
+            rel_path = rel_path[:-3]
 
+        # Check each target folder to find the module root
+        for target_folder in target_folders:
+            if rel_path.startswith(target_folder + '/'):
                 if debug:
                     print(
                         f"Debug: _get_module_path_from_file: "
                         f"checking target_folder={target_folder}"
                     )
 
-                # Check if file is within this target folder
-                if rel_path.startswith(target_folder + "/") or rel_path == target_folder:
-                    # Remove the target folder prefix to get the module path within the target
-                    if rel_path.startswith(target_folder + "/"):
-                        module_path = rel_path[len(target_folder) + 1 :]  # +1 for the '/'
-                    else:
-                        module_path = ""
+                # Find the module root by checking PYTHONPATH entries
+                pythonpath = os.environ.get('PYTHONPATH', '').split(':')
+                
+                if debug:
+                    print(f"Debug: _get_module_path_from_file: PYTHONPATH={pythonpath}")
 
-                    # Convert path separators to dots and remove .py extension
-                    module_path = module_path.replace("/", ".").replace(".py", "")
+                for path_entry in pythonpath:
+                    cwd_prefix = os.getcwd() + '/'
+                    normalized_entry = path_entry.replace(cwd_prefix, '')
+                    if path_entry and rel_path.startswith(normalized_entry):
+                        # Remove the PYTHONPATH prefix to get module path
+                        if normalized_entry and rel_path.startswith(normalized_entry + '/'):
+                            module_path = rel_path[len(normalized_entry) + 1:]
+                        elif normalized_entry == rel_path:
+                            module_path = ""
+                        else:
+                            continue
+                        
+                        result = module_path.replace('/', '.')
+                        if debug:
+                            print(f"Debug: _get_module_path_from_file: PYTHONPATH result={result}")
+                        return result
 
-                    # For target folder like 'example/domains', we want to include 'domains'
-                    # in the final module path since that's what import-linter expects
-                    # Extract the last part of the target folder as the root module
-                    root_module = target_folder.split("/")[-1]  # 'domains' from 'example/domains'
-
-                    if module_path:
-                        # Prepend the root module to the path
-                        result = f"{root_module}.{module_path}"
-                    else:
-                        # If module_path is empty, this file IS the root module folder
-                        result = root_module
-
+                # If no PYTHONPATH match, use target folder logic as fallback
+                if rel_path.startswith(target_folder + "/"):
+                    module_path = rel_path[len(target_folder) + 1:]
+                    # Use the last part of target folder as root module
+                    root_module = target_folder.split("/")[-1]
+                    result = f"{root_module}.{module_path}" if module_path else root_module
+                    result = result.replace('/', '.')
+                    
                     if debug:
-                        print(f"Debug: _get_module_path_from_file: result={result}")
-
+                        print(f"Debug: _get_module_path_from_file: target folder result={result}")
                     return result
 
-        # Fallback: use the relative path as-is
-        result = rel_path.replace("/", ".").replace(".py", "")
+        # Fallback: convert relative path to module path
+        result = rel_path.replace('/', '.')
         if debug:
             print(f"Debug: _get_module_path_from_file: fallback result={result}")
         return result

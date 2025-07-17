@@ -38,8 +38,12 @@ case "$1" in
         echo "Activating virtual environment..."
         echo "Run: source .venv/bin/activate"
         ;;
+    "env")
+        echo "Setting up PYTHONPATH environment..."
+        echo "Run: export PYTHONPATH=\$PWD/src:\$PWD/example:\$PYTHONPATH"
+        ;;
     *)
-        echo "Usage: $0 {install|test|lint|pylint|plugin|black|mypy|shell} [args...]"
+        echo "Usage: $0 {install|test|lint|pylint|plugin|black|mypy|shell|env} [args...]"
         echo ""
         echo "Commands:"
         echo "  install  - Install all dependencies"
@@ -49,7 +53,8 @@ case "$1" in
         echo "  plugin   - Test pylint plugin"
         echo "  black    - Run black formatter"
         echo "  mypy     - Run mypy type checker"
-        echo "  shell    - Show command to activate venv"
+        echo "  shell    - Show how to activate virtual environment"
+        echo "  env      - Show how to set up PYTHONPATH environment"
         exit 1
         ;;
 esac

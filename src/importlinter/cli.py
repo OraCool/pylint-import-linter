@@ -270,3 +270,8 @@ def _configure_logging(verbose: bool) -> None:
             },
         }
     )
+
+
+def main() -> None:
+    """Entry point wrapper for console script."""
+    lint_imports_command()  # pylint: disable=no-value-for-parameter
