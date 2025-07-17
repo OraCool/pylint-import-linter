@@ -52,12 +52,12 @@ class ImportLinterChecker(checkers.BaseChecker):
             },
         ),
         (
-            "import-linter-contracts",
+            "import-linter-contract",
             {
                 "default": (),
                 "type": "csv",
                 "metavar": "<contract-ids>",
-                "help": "Comma-separated list of contract IDs to check (defaults to all)",
+                "help": "Comma-separated list of contract IDs to check (same as CLI --contract)",
             },
         ),
         (
@@ -66,7 +66,7 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "default": (),
                 "type": "csv",
                 "metavar": "<folders>",
-                "help": "Comma-separated list of folders to check (defaults to all analyzed files)",
+                "help": "Comma-separated list of folders to check (same as CLI --target-folders)",
             },
         ),
         (
@@ -75,7 +75,8 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "default": (),
                 "type": "csv",
                 "metavar": "<folders>",
-                "help": "Comma-separated list of folders to exclude from checking",
+                "help": "Comma-separated list of folders to exclude from checking "
+                        "(same as CLI --exclude-folders)",
             },
         ),
         (
@@ -84,7 +85,7 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "default": None,
                 "type": "string",
                 "metavar": "<dir>",
-                "help": "Directory for import-linter cache (defaults to .import_linter_cache)",
+                "help": "Directory for import-linter cache (same as CLI --cache-dir)",
             },
         ),
         (
@@ -93,7 +94,7 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "default": False,
                 "type": "yn",
                 "metavar": "<y or n>",
-                "help": "Disable import-linter caching",
+                "help": "Disable import-linter caching (same as CLI --no-cache)",
             },
         ),
         (
@@ -102,7 +103,8 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "default": False,
                 "type": "yn",
                 "metavar": "<y or n>",
-                "help": "Enable verbose output showing what's being analyzed",
+                "help": "Enable verbose output showing what's being analyzed "
+                        "(same as CLI --verbose)",
             },
         ),
         (
@@ -111,7 +113,17 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "default": False,
                 "type": "yn",
                 "metavar": "<y or n>",
-                "help": "Show timing information for graph building and contract checking",
+                "help": "Show timing information for graph building and contract checking "
+                        "(same as CLI --show-timings)",
+            },
+        ),
+        (
+            "import-linter-debug",
+            {
+                "default": False,
+                "type": "yn",
+                "metavar": "<y or n>",
+                "help": "Enable debug mode for detailed error information (same as CLI --debug)",
             },
         ),
     )
@@ -177,13 +189,15 @@ class ImportLinterChecker(checkers.BaseChecker):
 
     def _check_import_contracts(self) -> None:
         """Run import-linter contract checking."""
+        debug = False
         try:
             # Get configuration options
             config_filename = self.linter.config.import_linter_config
-            limit_to_contracts = tuple(self.linter.config.import_linter_contracts or ())
+            limit_to_contracts = tuple(self.linter.config.import_linter_contract or ())
             cache_dir = self._get_cache_dir()
             verbose = self.linter.config.import_linter_verbose
             show_timings = self.linter.config.import_linter_show_timings
+            debug = self.linter.config.import_linter_debug
 
             if verbose:
                 print(f"Import-linter: Analyzing contracts in {config_filename}")
@@ -193,6 +207,8 @@ class ImportLinterChecker(checkers.BaseChecker):
                     print(f"Import-linter: Using cache directory: {cache_dir}")
                 else:
                     print("Import-linter: Cache disabled")
+                if debug:
+                    print("Import-linter: Debug mode enabled")
 
             # Read user options and register contract types
             from importlinter.application.use_cases import (
@@ -239,17 +255,27 @@ class ImportLinterChecker(checkers.BaseChecker):
         except (ImportError, FileNotFoundError, ValueError) as e:
             # Handle any errors in contract checking
             node_for_message = self._first_module_node
+            error_msg = str(e)
+            if debug:
+                import traceback
+                error_msg += f"\nDebug traceback:\n{traceback.format_exc()}"
+            
             self.add_message(
                 IMPORT_CONTRACT_ERROR,
-                args=(str(e),),
+                args=(error_msg,),
                 node=node_for_message,
             )
         except Exception as e:  # pylint: disable=broad-except
             # Handle any other unexpected errors during contract checking
             node_for_message = self._first_module_node
+            error_msg = f"Unexpected error: {str(e)}"
+            if debug:
+                import traceback
+                error_msg += f"\nDebug traceback:\n{traceback.format_exc()}"
+            
             self.add_message(
                 IMPORT_CONTRACT_ERROR,
-                args=(f"Unexpected error: {str(e)}",),
+                args=(error_msg,),
                 node=node_for_message,
             )
 

@@ -75,13 +75,14 @@ The plugin supports all import-linter configuration options::
 **Configuration Options:**
 
 - ``--import-linter-config``: Path to import-linter config file (default: ``.importlinter``)
-- ``--import-linter-contracts``: Comma-separated list of contract IDs to check
-- ``--import-linter-target-folders``: Comma-separated list of folders to check (default: all analyzed files)
-- ``--import-linter-exclude-folders``: Comma-separated list of folders to exclude from checking
-- ``--import-linter-cache-dir``: Directory for caching (default: ``.import_linter_cache``)
-- ``--import-linter-no-cache``: Disable caching
-- ``--import-linter-verbose``: Enable verbose output showing what's being analyzed
-- ``--import-linter-show-timings``: Show timing information for graph building and contract checking
+- ``--import-linter-contract``: Comma-separated list of contract IDs to check (same as CLI ``--contract``)
+- ``--import-linter-target-folders``: Comma-separated list of folders to check (same as CLI ``--target-folders``)
+- ``--import-linter-exclude-folders``: Comma-separated list of folders to exclude from checking (same as CLI ``--exclude-folders``)
+- ``--import-linter-cache-dir``: Directory for caching (same as CLI ``--cache-dir``)
+- ``--import-linter-no-cache``: Disable caching (same as CLI ``--no-cache``)
+- ``--import-linter-verbose``: Enable verbose output (same as CLI ``--verbose``)
+- ``--import-linter-show-timings``: Show timing information (same as CLI ``--show-timings``)
+- ``--import-linter-debug``: Enable debug mode (same as CLI ``--debug``)
 
 Folder-Based Configuration
 --------------------------
