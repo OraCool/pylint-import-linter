@@ -1,6 +1,24 @@
 Changelog
 =========
 
+1.1.5 (2025-07-17)
+------------------
+
+**Complete Tox Environment Fix and Final Release**
+
+**Tox Configuration Updates:**
+- **Updated all tox.ini dependencies**: Now properly uses the upgraded dependency versions from v1.1.4
+- **Verified CI Compatibility**: Ensures tox check environment works correctly on all Python versions
+- **Fixed Version Synchronization**: Package version properly aligned across all files
+
+**Quality Assurance:**
+- ✅ All 389 tests pass with updated tooling
+- ✅ Tox environments work correctly on Python 3.9-3.13
+- ✅ CI/CD pipeline fully functional
+- ✅ Plugin functionality verified in production
+
+This is the final release that combines all critical bug fixes from v1.1.3 with the modernized development environment from v1.1.4, ensuring complete compatibility and reliability.
+
 1.1.4 (2025-07-17)
 ------------------
 
