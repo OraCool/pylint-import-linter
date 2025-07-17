@@ -1,6 +1,23 @@
 Changelog
 =========
 
+1.1.1 (2025-07-17)
+------------------
+
+**CI/CD and Build Fixes**
+
+**Bug Fixes:**
+- **CI/CD Pipeline**: Fixed Black code formatting issues in pylint_plugin.py
+- **Type Dependencies**: Added types-PyYAML dependency for proper type checking
+- **Package Building**: Resolved build issues and dependency conflicts
+- **Quality Checks**: All linting, formatting, and type checking now pass
+
+**Improvements:**
+- **Code Quality**: Consistent code formatting with Black
+- **Type Safety**: Complete type checking with proper stub dependencies
+- **Build Process**: Streamlined build and release workflow
+- **Documentation**: Updated with proper version references
+
 1.1.0 (2025-07-17)
 ------------------
 
