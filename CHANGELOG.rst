@@ -1,6 +1,32 @@
 Changelog
 =========
 
+1.1.4 (2025-07-17)
+------------------
+
+**Development Environment Modernization and CI Fixes**
+
+**Dependency Upgrades:**
+- **flake8**: Upgraded from 4.0.1 → 7.3.0 (fixes Python 3.10 CI compatibility issues)
+- **black**: Upgraded from 22.3.0 → 25.1.0 (latest code formatting improvements)
+- **mypy**: Upgraded from 0.730 → 1.17.0 (enhanced type checking and strictness)
+- **pytest**: Upgraded from 7.4.0 → 8.4.1 (latest testing framework features)
+- **pytest-cov**: Upgraded from 4.1.0 → 6.2.1 (improved coverage reporting)
+- **coverage**: Upgraded from 6.3.1 → 7.9.2 (better performance and features)
+- **PyYAML**: Updated from 6.0.1 → 6.0.2 (latest stable version)
+
+**CI/CD Improvements:**
+- **Fixed Python 3.10 CI Failures**: Resolved tox check environment failures caused by flake8/importlib-metadata compatibility issues
+- **Enhanced Quality Assurance**: All 389 tests pass with updated dependencies
+- **Improved Development Experience**: Modern tool versions provide better error messages and performance
+
+**Quality Validation:**
+- ✅ All formatting checks pass with Black 25.1.0
+- ✅ All linting passes with flake8 7.3.0 
+- ✅ All type checks pass with mypy 1.17.0
+- ✅ All tests pass with pytest 8.4.1
+- ✅ Coverage reporting works correctly
+
 1.1.3 (2025-07-17)
 ------------------
 
