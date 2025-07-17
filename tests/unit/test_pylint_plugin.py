@@ -451,7 +451,7 @@ class TestErrorHandling:
 
         self.checker = ImportLinterChecker(self.mock_linter)
         self.checker._first_module_node = Mock()
-        self.checker.add_message = Mock()  # type: ignore[assignment]
+        self.checker.add_message = Mock()
 
     @patch("importlinter.application.use_cases.read_user_options")
     def test_check_import_contracts_import_error(self, mock_read_user_options):
@@ -544,7 +544,7 @@ class TestIntegrationScenarios:
         self.mock_linter.config.import_linter_debug = False
 
         self.checker = ImportLinterChecker(self.mock_linter)
-        self.checker.add_message = Mock()  # type: ignore[assignment]
+        self.checker.add_message = Mock()
 
     def test_complete_workflow_with_violations(self):
         """Test complete workflow from file analysis to violation reporting."""
