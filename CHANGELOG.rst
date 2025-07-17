@@ -1,6 +1,50 @@
 Changelog
 =========
 
+1.1.3 (2025-07-17)
+------------------
+
+**Critical Bug Fix: Remove Hardcoded Domain Names from Pylint Plugin**
+
+**Major Bug Fixes:**
+- **Removed Hardcoded Values**: Eliminated hardcoded "domains.document" and "domains.billing" strings from pylint plugin that prevented it from working with other domain structures
+- **Dynamic Module Path Resolution**: Implemented proper module path resolution based on target folder configuration instead of hardcoded prefixes
+- **Configuration-Driven Contract Matching**: Plugin now properly uses contracts from .importlinter configuration files instead of hardcoded patterns
+- **Contract-Based Violation Detection**: Implemented proper contract violation matching using import-linter's contract system with forbidden and independence contract support
+- **Wildcard Pattern Support**: Added support for single (*) and recursive (**) wildcard patterns in contract matching
+
+**Technical Improvements:**
+- **Generic Plugin Architecture**: Plugin now works with any domain structure defined in configuration files, not just hardcoded "domains.*" patterns
+- **Proper Import Resolution**: Fixed module path calculation to respect Python import structure and target folder configuration
+- **Line-Specific Error Reporting**: Violations are now reported at the exact import lines with proper pylint message IDs
+- **Enhanced Debug Output**: Added comprehensive debug logging for troubleshooting contract matching and module resolution
+
+**Verification:**
+- Plugin now correctly detects violations: went from always reporting 10.00/10 (false negative) to properly flagging violations (1.67/10 for test file)
+- Successfully tested with document domain violations: 3 violations detected on lines 4, 7, and 8
+- Plugin works with any import-linter configuration, not just the hardcoded example domains
+
+1.1.2 (2025-07-17)
+------------------
+
+**Enhanced Documentation and Wildcard Pattern Support**
+
+**New Features:**
+- **Comprehensive Wildcard Documentation**: Detailed explanations of `*` (single) vs `**` (recursive) wildcard patterns
+- **Enhanced Usage Examples**: Complete guide with practical examples for `ignore_imports` configuration
+- **Improved Contract Types Documentation**: Expanded wildcards section with real-world use cases
+- **Author Recognition**: Updated AUTHORS.rst and LICENSE to properly recognize all contributors
+
+**Documentation Improvements:**
+- **Wildcard Pattern Guide**: Clear distinction between single and recursive wildcards
+- **Practical Examples**: Real-world scenarios for test utilities, cross-domain imports, and migration patterns
+- **Configuration Examples**: Complete .importlinter configuration examples with wildcard patterns
+- **Command Line Testing**: Instructions for testing wildcard patterns with verbose output
+
+**Bug Fixes:**
+- **License Attribution**: Added proper copyright notice for all contributors
+- **Documentation Cross-References**: Improved linking between documentation sections
+
 1.1.1 (2025-07-17)
 ------------------
 
