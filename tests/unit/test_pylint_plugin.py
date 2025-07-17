@@ -6,10 +6,11 @@ and properly detects contract violations at the line level.
 """
 
 from unittest.mock import Mock, patch
+
 import pytest
 
-from importlinter.pylint_plugin import ImportLinterChecker, register
 from importlinter.application.constants import IMPORT_BOUNDARY_VIOLATION
+from importlinter.pylint_plugin import ImportLinterChecker, register
 
 
 class TestImportLinterChecker:

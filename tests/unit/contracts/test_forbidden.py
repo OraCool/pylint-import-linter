@@ -1,4 +1,4 @@
-from typing import Tuple, List, Dict
+from typing import Dict, List, Tuple
 
 import pytest
 from grimp.adaptors.graph import ImportGraph

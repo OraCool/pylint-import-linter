@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Union, Any
+from typing import Any, Union
 
 from pylint import checkers
 from pylint.lint import PyLinter
@@ -19,14 +19,14 @@ try:
 except ImportError:
     nodes = None
 
-from importlinter.application.sentinels import NotSupplied
-from importlinter.configuration import configure
 from importlinter.application.constants import (
     IMPORT_CONTRACT_ERROR,
     MESSAGES,
     format_violation_message,
     get_message_id_for_contract_type,
 )
+from importlinter.application.sentinels import NotSupplied
+from importlinter.configuration import configure
 
 # Configure import-linter
 configure()
@@ -210,9 +210,9 @@ class ImportLinterChecker(checkers.BaseChecker):
 
             # Read user options and register contract types
             from importlinter.application.use_cases import (
-                read_user_options,
-                create_report,
                 _register_contract_types,
+                create_report,
+                read_user_options,
             )
 
             user_options = read_user_options(config_filename=config_filename)
@@ -391,12 +391,12 @@ class ImportLinterChecker(checkers.BaseChecker):
             print(f"Debug: _get_module_path_from_file: target_folders={target_folders}")
 
         # Remove file extension
-        if rel_path.endswith('.py'):
+        if rel_path.endswith(".py"):
             rel_path = rel_path[:-3]
 
         # Check each target folder to find the module root
         for target_folder in target_folders:
-            if rel_path.startswith(target_folder + '/'):
+            if rel_path.startswith(target_folder + "/"):
                 if debug:
                     print(
                         f"Debug: _get_module_path_from_file: "
@@ -404,42 +404,52 @@ class ImportLinterChecker(checkers.BaseChecker):
                     )
 
                 # Find the module root by checking PYTHONPATH entries
-                pythonpath = os.environ.get('PYTHONPATH', '').split(':')
-                
+                pythonpath = os.environ.get("PYTHONPATH", "").split(":")
+
                 if debug:
                     print(f"Debug: _get_module_path_from_file: PYTHONPATH={pythonpath}")
 
                 for path_entry in pythonpath:
-                    cwd_prefix = os.getcwd() + '/'
-                    normalized_entry = path_entry.replace(cwd_prefix, '')
+                    cwd_prefix = os.getcwd() + "/"
+                    normalized_entry = path_entry.replace(cwd_prefix, "")
                     if path_entry and rel_path.startswith(normalized_entry):
                         # Remove the PYTHONPATH prefix to get module path
-                        if normalized_entry and rel_path.startswith(normalized_entry + '/'):
-                            module_path = rel_path[len(normalized_entry) + 1:]
+                        if normalized_entry and rel_path.startswith(normalized_entry + "/"):
+                            module_path = rel_path[len(normalized_entry) + 1 :]
                         elif normalized_entry == rel_path:
                             module_path = ""
                         else:
                             continue
-                        
-                        result = module_path.replace('/', '.')
+
+                        result = module_path.replace("/", ".")
                         if debug:
                             print(f"Debug: _get_module_path_from_file: PYTHONPATH result={result}")
                         return result
 
                 # If no PYTHONPATH match, use target folder logic as fallback
-                if rel_path.startswith(target_folder + "/"):
-                    module_path = rel_path[len(target_folder) + 1:]
-                    # Use the last part of target folder as root module
-                    root_module = target_folder.split("/")[-1]
-                    result = f"{root_module}.{module_path}" if module_path else root_module
-                    result = result.replace('/', '.')
-                    
-                    if debug:
-                        print(f"Debug: _get_module_path_from_file: target folder result={result}")
-                    return result
+                module_path = rel_path[len(target_folder) + 1 :]
+                # Use the last part of target folder as root module
+                root_module = target_folder.split("/")[-1]
+                result = f"{root_module}.{module_path}" if module_path else root_module
+                result = result.replace("/", ".")
+
+                if debug:
+                    print(f"Debug: _get_module_path_from_file: target folder result={result}")
+                return result
+            elif rel_path == target_folder:
+                # File is exactly at the target folder root
+                root_module = target_folder.split("/")[-1]
+                result = root_module
+
+                if debug:
+                    print(
+                        f"Debug: _get_module_path_from_file: "
+                        f"root target folder result={result}"
+                    )
+                return result
 
         # Fallback: convert relative path to module path
-        result = rel_path.replace('/', '.')
+        result = rel_path.replace("/", ".")
         if debug:
             print(f"Debug: _get_module_path_from_file: fallback result={result}")
         return result

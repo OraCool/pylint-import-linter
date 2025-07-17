@@ -1,17 +1,17 @@
+import json
 import os
 import sys
-import json
 from logging import config as logging_config
 from typing import Optional, Tuple, Type, Union
 
 import click
 
-from importlinter.application.sentinels import NotSupplied
 from importlinter.application.formatters import (
     format_report_as_json,
     format_report_as_json2,
     should_use_json_output,
 )
+from importlinter.application.sentinels import NotSupplied
 
 from . import configuration
 from .application import use_cases
@@ -152,9 +152,9 @@ def lint_imports(
     if should_use_json_output(output_format):
         # For JSON output, we need the detailed report
         from importlinter.application.use_cases import (
-            read_user_options,
-            create_report,
             _register_contract_types,
+            create_report,
+            read_user_options,
         )
 
         try:
