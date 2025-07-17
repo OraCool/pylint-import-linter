@@ -76,7 +76,7 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "type": "csv",
                 "metavar": "<folders>",
                 "help": "Comma-separated list of folders to exclude from checking "
-                        "(same as CLI --exclude-folders)",
+                "(same as CLI --exclude-folders)",
             },
         ),
         (
@@ -104,7 +104,7 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "type": "yn",
                 "metavar": "<y or n>",
                 "help": "Enable verbose output showing what's being analyzed "
-                        "(same as CLI --verbose)",
+                "(same as CLI --verbose)",
             },
         ),
         (
@@ -114,7 +114,7 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "type": "yn",
                 "metavar": "<y or n>",
                 "help": "Show timing information for graph building and contract checking "
-                        "(same as CLI --show-timings)",
+                "(same as CLI --show-timings)",
             },
         ),
         (
@@ -223,8 +223,8 @@ class ImportLinterChecker(checkers.BaseChecker):
             if verbose:
                 print(f"Import-linter: Found {len(user_options.contracts_options)} contracts")
                 for i, contract_options in enumerate(user_options.contracts_options, 1):
-                    name = contract_options.get('name', f'Contract {i}')
-                    contract_type = contract_options.get('type', 'unknown')
+                    name = contract_options.get("name", f"Contract {i}")
+                    contract_type = contract_options.get("type", "unknown")
                     print(f"Import-linter: Contract {i}: {name} (type: {contract_type})")
 
             # Create detailed report instead of just checking pass/fail
@@ -258,8 +258,9 @@ class ImportLinterChecker(checkers.BaseChecker):
             error_msg = str(e)
             if debug:
                 import traceback
+
                 error_msg += f"\nDebug traceback:\n{traceback.format_exc()}"
-            
+
             self.add_message(
                 IMPORT_CONTRACT_ERROR,
                 args=(error_msg,),
@@ -271,8 +272,9 @@ class ImportLinterChecker(checkers.BaseChecker):
             error_msg = f"Unexpected error: {str(e)}"
             if debug:
                 import traceback
+
                 error_msg += f"\nDebug traceback:\n{traceback.format_exc()}"
-            
+
             self.add_message(
                 IMPORT_CONTRACT_ERROR,
                 args=(error_msg,),
