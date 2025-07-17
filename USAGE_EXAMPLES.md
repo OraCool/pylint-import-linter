@@ -159,6 +159,125 @@ pylint --load-plugins=importlinter.pylint_plugin \
        src/
 ```
 
+## Wildcard Patterns and ignore_imports
+
+### Understanding Wildcards
+
+Import-linter supports two types of wildcards in `ignore_imports` configuration:
+
+- **Single wildcard (`*`)**: Matches direct submodules only
+- **Recursive wildcard (`**`)**: Matches all nested submodules and subpackages
+
+### Single Wildcard Examples
+
+```ini
+# Configuration file (.importlinter)
+[importlinter:contract:test_imports]
+name = Test imports boundaries
+type = forbidden
+source_modules = 
+    document.tests.*
+forbidden_modules = 
+    document.core
+    document.api
+ignore_imports =
+    # Ignore imports from direct test submodules
+    document.tests.* -> document.core.exceptions
+```
+
+**This matches:**
+- `document.tests.unit -> document.core.exceptions` ✅
+- `document.tests.integration -> document.core.exceptions` ✅
+
+**This does NOT match:**
+- `document.tests.unit.helpers -> document.core.exceptions` ❌
+
+### Recursive Wildcard Examples
+
+```ini
+# Configuration file (.importlinter)
+[importlinter:contract:test_imports]
+name = Test imports boundaries  
+type = forbidden
+source_modules = 
+    document.tests.**
+forbidden_modules = 
+    document.core
+ignore_imports =
+    # Ignore imports from ALL test modules (nested included)
+    document.tests.** -> document.core.exceptions
+```
+
+**This matches:**
+- `document.tests.unit -> document.core.exceptions` ✅
+- `document.tests.unit.helpers -> document.core.exceptions` ✅
+- `document.tests.integration.api.endpoints -> document.core.exceptions` ✅
+
+### Bidirectional Wildcards
+
+```ini
+ignore_imports =
+    # Ignore all imports between document and contacts domains
+    document.** -> contacts.**
+    contacts.** -> document.**
+```
+
+### Complex Wildcard Patterns
+
+```ini
+ignore_imports =
+    # Specific pattern: any module -> specific utilities
+    *.utils.** -> common.logging
+    
+    # Mixed patterns: specific module -> any submodule
+    document.apps.doclib.tests.* -> contacts.models.*
+    
+    # Deep nesting: match specific paths
+    document.apps.**.tests.** -> testing.fixtures.**
+```
+
+### Practical Use Cases
+
+#### 1. Ignore Test Utilities
+
+```ini
+# Allow test files to import from test utilities
+ignore_imports =
+    tests.** -> tests.utils.**
+    tests.** -> tests.fixtures.**
+```
+
+#### 2. Allow Specific Cross-Domain Imports
+
+```ini
+# Allow specific cross-domain imports for shared utilities
+ignore_imports =
+    document.** -> shared.validators.**
+    billing.** -> shared.validators.**
+    contacts.** -> shared.validators.**
+```
+
+#### 3. Migration Period Exceptions
+
+```ini
+# Temporary exceptions during refactoring
+ignore_imports =
+    legacy.** -> new_architecture.**
+    old_module.** -> refactored_module.**
+```
+
+### Command Line Testing
+
+```bash
+# Test your wildcard patterns with verbose output
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-verbose=yes \
+       --import-linter-debug=yes \
+       --disable=all \
+       --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
+       src/
+```
+
 ## Error Handling and Troubleshooting
 
 ### Configuration Error Debugging

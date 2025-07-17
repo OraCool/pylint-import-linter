@@ -3,6 +3,7 @@ Authors
 =======
 
 * David Seddon - https://seddonym.me
+* Siarhei Skuratovich - https://github.com/OraCool
 
 
 Contributors

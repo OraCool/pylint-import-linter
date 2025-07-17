@@ -90,4 +90,8 @@ dev-dependencies = [
     "mypy>=1.0.0",
     "pyyaml>=6.0.2",
     "build>=1.2.2.post1",
+    "pylint-import-linter",
 ]
+
+[tool.uv.sources]
+pylint-import-linter = { workspace = true }
