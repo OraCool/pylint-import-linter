@@ -61,7 +61,7 @@ Add the plugin to your ``.pylintrc`` or ``pyproject.toml``:
 Plugin Options
 --------------
 
-The plugin supports all import-linter configuration options::
+The plugin supports all import-linter configuration options with unified parameter names::
 
     pylint --load-plugins=importlinter.pylint_plugin \
            --import-linter-config=.importlinter \
@@ -70,6 +70,9 @@ The plugin supports all import-linter configuration options::
            --import-linter-exclude-folders=tests,docs \
            --import-linter-cache-dir=.cache \
            --import-linter-no-cache=yes \
+           --import-linter-verbose=yes \
+           --import-linter-debug=yes \
+           --import-linter-show-timings=yes \
            src/
 
 **Configuration Options:**
@@ -83,6 +86,73 @@ The plugin supports all import-linter configuration options::
 - ``--import-linter-verbose``: Enable verbose output (same as CLI ``--verbose``)
 - ``--import-linter-show-timings``: Show timing information (same as CLI ``--show-timings``)
 - ``--import-linter-debug``: Enable debug mode (same as CLI ``--debug``)
+
+Debug and Verbose Mode
+----------------------
+
+The plugin provides enhanced debugging capabilities for troubleshooting contract violations:
+
+**Debug Mode:**
+
+.. code-block:: bash
+
+    # Enable debug mode for detailed error reporting
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=.importlinter \
+           --import-linter-debug=yes \
+           src/
+
+Debug mode provides:
+
+- **Stack traces** for configuration errors
+- **Detailed error messages** with file paths and line numbers
+- **Cache usage information**
+- **Contract analysis progress**
+
+**Verbose Mode:**
+
+.. code-block:: bash
+
+    # Enable verbose mode for detailed analysis progress
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=.importlinter \
+           --import-linter-verbose=yes \
+           src/
+
+Verbose mode shows:
+
+- **Real-time analysis progress** ("Analyzing contracts in config.ini")
+- **Contract details** ("Found 3 contracts", "Contract 1: Document domain boundaries")
+- **Import chain analysis** ("Searching for import chains from A to B")
+- **Final results summary**
+
+**Full Debug Mode (Recommended for Troubleshooting):**
+
+.. code-block:: bash
+
+    # Enable all diagnostic options
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=.importlinter \
+           --import-linter-debug=yes \
+           --import-linter-verbose=yes \
+           --import-linter-show-timings=yes \
+           --disable=all \
+           --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
+           src/
+
+**Single File Analysis:**
+
+.. code-block:: bash
+
+    # Debug specific file with full diagnostic mode
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=.importlinter \
+           --import-linter-target-folders=src/domains \
+           --import-linter-debug=yes \
+           --import-linter-verbose=yes \
+           --disable=all \
+           --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
+           src/specific_file.py
 
 Folder-Based Configuration
 --------------------------
@@ -398,13 +468,123 @@ Integration Examples
 VS Code
 -------
 
-Add to your VS Code settings:
+**Settings Configuration:**
+
+Add to your VS Code settings (``.vscode/settings.json``):
 
 .. code-block:: json
 
     {
-        "pylint.args": ["--load-plugins=importlinter.pylint_plugin"]
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.linting.pylintArgs": [
+            "--load-plugins=importlinter.pylint_plugin",
+            "--import-linter-config=.importlinter",
+            "--import-linter-target-folders=src/domains",
+            "--enable=import-boundary-violation,import-layer-violation,import-independence-violation,import-contract-violation,import-contract-error"
+        ],
+        "python.linting.lintOnSave": true,
+        "python.linting.maxNumberOfProblems": 100
     }
+
+**Task Configuration:**
+
+Add debug tasks to ``.vscode/tasks.json``:
+
+.. code-block:: json
+
+    {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "Debug Import Violations (Full Debug Mode)",
+                "type": "shell",
+                "command": "uv",
+                "args": [
+                    "run",
+                    "pylint",
+                    "--load-plugins=importlinter.pylint_plugin",
+                    "--import-linter-config=.importlinter",
+                    "--import-linter-target-folders=src/domains",
+                    "--import-linter-debug=yes",
+                    "--import-linter-verbose=yes",
+                    "--import-linter-show-timings=yes",
+                    "--disable=all",
+                    "--enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error",
+                    "${file}"
+                ],
+                "group": "test"
+            },
+            {
+                "label": "Check Import Violations (Current File)",
+                "type": "shell",
+                "command": "uv",
+                "args": [
+                    "run",
+                    "pylint",
+                    "--load-plugins=importlinter.pylint_plugin",
+                    "--import-linter-config=.importlinter",
+                    "--import-linter-target-folders=src/domains",
+                    "--disable=all",
+                    "--enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error",
+                    "${file}"
+                ],
+                "group": "test"
+            }
+        ]
+    }
+
+**Launch Configuration:**
+
+Add debug configurations to ``.vscode/launch.json``:
+
+.. code-block:: json
+
+    {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Debug Pylint Plugin (Debug Mode)",
+                "type": "debugpy",
+                "request": "launch",
+                "module": "pylint",
+                "args": [
+                    "--load-plugins=importlinter.pylint_plugin",
+                    "--import-linter-config=.importlinter",
+                    "--import-linter-target-folders=src/domains",
+                    "--import-linter-debug=yes",
+                    "--import-linter-verbose=yes",
+                    "--import-linter-show-timings=yes",
+                    "--disable=all",
+                    "--enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error",
+                    "${file}"
+                ],
+                "console": "integratedTerminal",
+                "cwd": "${workspaceFolder}"
+            }
+        ]
+    }
+
+**Usage:**
+
+1. **Quick Analysis**: Use ``Ctrl+Shift+P`` → "Tasks: Run Task" → "Check Import Violations (Current File)"
+2. **Debug Mode**: Use ``Ctrl+Shift+P`` → "Tasks: Run Task" → "Debug Import Violations (Full Debug Mode)"
+3. **Debugging**: Press ``F5`` and select "Debug Pylint Plugin (Debug Mode)"
+4. **Problems Panel**: All violations appear in View → Problems
+
+**Example Debug Output:**
+
+.. code-block:: text
+
+    Import-linter: Analyzing contracts in .importlinter
+    Import-linter: Debug mode enabled
+    Import-linter: Found 3 contracts
+    Import-linter: Contract 1: Document domain boundaries (type: forbidden)
+    Building import graph (cache directory is .import_linter_cache)...
+    Built graph in 0s.
+    Checking Document domain boundaries...
+    Found 2 illegal chains in 0s.
+    Document domain boundaries BROKEN [0s]
 
 PyCharm
 -------

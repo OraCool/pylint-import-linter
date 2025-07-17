@@ -82,6 +82,41 @@ Target specific folders for large codebases or gradual adoption:
            --import-linter-exclude-folders=tests,docs \
            src/
 
+**Debug and Verbose Mode:**
+
+For troubleshooting contract violations, use debug and verbose modes:
+
+.. code-block:: bash
+
+    # Full debug mode with all diagnostic information
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-config=.importlinter \
+           --import-linter-debug=yes \
+           --import-linter-verbose=yes \
+           --import-linter-show-timings=yes \
+           --disable=all \
+           --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
+           src/
+
+    # Verbose mode shows detailed analysis progress
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-verbose=yes \
+           src/
+
+**Debug Mode Features:**
+
+- Stack traces for configuration errors
+- Detailed error messages with file paths and line numbers
+- Cache usage information
+- Contract analysis progress
+
+**Verbose Mode Features:**
+
+- Real-time analysis progress
+- Contract details and import chain analysis
+- Timing information for each operation
+- Final results summary
+
 **IDE Integration:**
 Most IDEs that support pylint will automatically pick up the plugin when configured in your project settings.
 

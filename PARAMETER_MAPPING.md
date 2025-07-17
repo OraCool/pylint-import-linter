@@ -38,6 +38,24 @@ pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-verbose=yes \
        src/
 
+# With debug and verbose mode (recommended for troubleshooting)
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-config=importlinter.ini \
+       --import-linter-verbose=yes \
+       --import-linter-debug=yes \
+       --import-linter-show-timings=yes \
+       src/
+
+# Debug mode for single file analysis
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-config=importlinter.ini \
+       --import-linter-target-folders=src/domains \
+       --import-linter-debug=yes \
+       --import-linter-verbose=yes \
+       --disable=all \
+       --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
+       src/specific_file.py
+
 # With specific contracts
 pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-contract=document_domain,billing_domain \
@@ -57,6 +75,62 @@ pylint --load-plugins=importlinter.pylint_plugin \
 1. **Parameter Names**: Plugin parameters have the `--import-linter-` prefix to avoid conflicts with pylint's own parameters
 2. **Boolean Values**: Plugin boolean parameters use `=yes/no` format instead of flags
 3. **Multiple Values**: Both support comma-separated values, but plugin uses single parameter while CLI allows multiple parameter usage
+
+## Debug and Verbose Mode Configuration
+
+### For Troubleshooting Import Violations
+
+When you need to debug import contract violations, use both debug and verbose modes:
+
+```bash
+# Full debug mode with all diagnostic information
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-config=importlinter.ini \
+       --import-linter-debug=yes \
+       --import-linter-verbose=yes \
+       --import-linter-show-timings=yes \
+       --disable=all \
+       --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
+       your_file.py
+```
+
+### What Debug Mode Shows:
+- **Stack traces** for configuration errors
+- **Detailed error messages** with file paths and line numbers
+- **Cache usage information**
+- **Contract analysis progress**
+
+### What Verbose Mode Shows:
+- **Real-time analysis progress** ("Analyzing contracts in config.ini")
+- **Contract details** ("Found 3 contracts", "Contract 1: Document domain boundaries")
+- **Import chain analysis** ("Searching for import chains from A to B")
+- **Timing information** for each operation
+- **Final results summary**
+
+### VS Code Task Configuration
+
+You can also configure VS Code tasks for debug mode:
+
+```json
+{
+    "label": "Debug Import Violations",
+    "type": "shell",
+    "command": "uv",
+    "args": [
+        "run",
+        "pylint",
+        "--load-plugins=importlinter.pylint_plugin",
+        "--import-linter-config=importlinter.ini",
+        "--import-linter-debug=yes",
+        "--import-linter-verbose=yes",
+        "--import-linter-show-timings=yes",
+        "--disable=all",
+        "--enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error",
+        "${file}"
+    ],
+    "group": "test"
+}
+```
 
 ## Migration Guide
 

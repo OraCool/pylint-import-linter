@@ -3,6 +3,16 @@ Changelog
 
 latest
 ------
+- **NEW**: Enhanced Pylint plugin with unified parameter interface
+- **NEW**: Debug mode support with detailed error reporting and stack traces
+- **NEW**: Verbose mode support with real-time analysis progress
+- **NEW**: Timing information support for performance monitoring
+- **NEW**: Unified parameter names between CLI and plugin (--import-linter- prefix)
+- **NEW**: Single file analysis support for targeted debugging
+- **NEW**: Comprehensive VS Code integration with tasks and launch configurations
+- **NEW**: Enhanced error handling with detailed diagnostic information
+- **IMPROVED**: Parameter consistency across CLI and plugin interfaces
+- **IMPROVED**: Documentation with debug mode examples and VS Code setup
 - Fix incorrect handling of unicode characters in TOML files on Windows.
 - Changed pre-commit hook to use the system virtualenv and to run whenever
   any file changes, not just a Python file.
