@@ -167,10 +167,10 @@ class ImportLinterChecker(checkers.BaseChecker):
             # Convert relative paths to absolute paths
             if not os.path.isabs(path_entry):
                 path_entry = os.path.abspath(path_entry)
-            
+
             if path_entry not in sys.path:
                 sys.path.insert(0, path_entry)
-            
+
             # Also set in environment for import-linter
             current_pythonpath = os.environ.get("PYTHONPATH", "")
             if path_entry not in current_pythonpath.split(os.pathsep):
@@ -191,7 +191,7 @@ class ImportLinterChecker(checkers.BaseChecker):
             self._single_file_mode = len(self._analyzed_files) == 1
             if self._single_file_mode:
                 self._optimize_for_single_file()
-            
+
             self._check_import_contracts()
             self._check_individual_imports()  # Check individual imports for line-specific reporting
             self._contracts_checked = True
@@ -498,66 +498,88 @@ class ImportLinterChecker(checkers.BaseChecker):
         if rel_path.endswith(".py"):
             rel_path = rel_path[:-3]
 
-        # FIRST: Check for domains structure patterns to match import-linter expectations
-        # Look for patterns like domains/gwpy-document/document/apps/audit/apps.py
-        # Should resolve to document.apps.audit.apps to match import-linter output
+        # Try different resolution strategies in order of priority
+        strategies = [
+            self._try_domains_pattern,
+            self._try_pythonpath_resolution,
+            self._try_target_folder_resolution,
+            self._fallback_resolution
+        ]
+
+        for strategy in strategies:
+            result = strategy(rel_path, target_folders, debug)
+            if result is not None:
+                return result
+
+        # Final fallback
+        return rel_path.replace("/", ".")
+
+    def _try_domains_pattern(self, rel_path: str, target_folders, debug: bool) -> str | None:
+        """Try to resolve using domains pattern structure."""
         domains_pattern = "domains/"
+
         if debug:
             print(f"Debug: _get_module_path_from_file: checking domains pattern "
                   f"on rel_path={rel_path}")
             print(f"Debug: _get_module_path_from_file: domains_pattern={domains_pattern}")
-            print(f"Debug: _get_module_path_from_file: rel_path.startswith(domains_pattern)="
-                  f"{rel_path.startswith(domains_pattern)}")
-        if rel_path.startswith(domains_pattern):
-            # Extract the domain name and path after domains/
-            after_domains = rel_path[len(domains_pattern):]
-            parts = after_domains.split("/")
-            
+            print(f"Debug: _get_module_path_from_file: "
+                  f"rel_path.startswith(domains_pattern)={rel_path.startswith(domains_pattern)}")
+
+        if not rel_path.startswith(domains_pattern):
             if debug:
-                print(f"Debug: _get_module_path_from_file: "
-                      f"after_domains={after_domains}, parts={parts}")
-            
-            if len(parts) >= 2:
-                # For domains/gwpy-document/document/apps/audit/apps
-                # parts = ['gwpy-document', 'document', 'apps', 'audit', 'apps']
-                # We want to use everything starting from the second part: document.apps.audit.apps
-                domain_module_parts = parts[1:]  # Skip gwpy-document prefix
-                result = ".".join(domain_module_parts)
-                if debug:
-                    print(f"Debug: _get_module_path_from_file: domains pattern result={result}")
-                return result
-            else:
-                if debug:
-                    print(f"Debug: _get_module_path_from_file: not enough parts in domains path")
+                print("Debug: _get_module_path_from_file: rel_path does not start with domains/")
+            return None
+
+        # Extract the domain name and path after domains/
+        after_domains = rel_path[len(domains_pattern):]
+        parts = after_domains.split("/")
+
+        if debug:
+            print(f"Debug: _get_module_path_from_file: "
+                  f"after_domains={after_domains}, parts={parts}")
+
+        if len(parts) >= 2:
+            # For domains/gwpy-document/document/apps/audit/apps
+            # parts = ['gwpy-document', 'document', 'apps', 'audit', 'apps']
+            # We want to use everything starting from the second part: document.apps.audit.apps
+            domain_module_parts = parts[1:]  # Skip gwpy-document prefix
+            result = ".".join(domain_module_parts)
+            if debug:
+                print(f"Debug: _get_module_path_from_file: domains pattern result={result}")
+            return result
         else:
             if debug:
-                print(f"Debug: _get_module_path_from_file: rel_path does not start with domains/")
+                print("Debug: _get_module_path_from_file: not enough parts in domains path")
+            return None
 
-        # Get PYTHONPATH entries - combine configured entries with environment
+    def _try_pythonpath_resolution(self, rel_path: str, target_folders, debug: bool) -> str | None:
+        """Try to resolve using PYTHONPATH entries."""
+        pythonpath_entries = self._get_all_pythonpath_entries(debug)
+
+        for pythonpath_entry in pythonpath_entries:
+            result = self._resolve_with_pythonpath_entry(rel_path, pythonpath_entry, debug)
+            if result is not None:
+                return result
+
+        return None
+
+    def _get_all_pythonpath_entries(self, debug: bool) -> list[str]:
+        """Get all PYTHONPATH entries as relative paths."""
         configured_pythonpath = self.linter.config.import_linter_pythonpath or ()
         env_pythonpath = os.environ.get("PYTHONPATH", "").split(":")
-        
-        # Convert configured relative paths to absolute, then back to relative for consistency
+
         all_pythonpath_entries = []
+
+        # Add configured entries
         for path_entry in configured_pythonpath:
-            if not os.path.isabs(path_entry):
-                abs_path = os.path.abspath(path_entry)
-                # Convert back to relative from cwd for consistency with env entries
-                rel_entry = os.path.relpath(abs_path, os.getcwd())
-                all_pythonpath_entries.append(rel_entry)
-            else:
-                # Convert absolute path to relative from cwd
-                rel_entry = os.path.relpath(path_entry, os.getcwd())
-                all_pythonpath_entries.append(rel_entry)
-        
-        # Add environment PYTHONPATH entries (converted to relative paths)
+            rel_entry = self._convert_to_relative_path(path_entry)
+            all_pythonpath_entries.append(rel_entry)
+
+        # Add environment entries
         for path_entry in env_pythonpath:
             if path_entry:  # Skip empty entries
-                if os.path.isabs(path_entry):
-                    rel_entry = os.path.relpath(path_entry, os.getcwd())
-                    all_pythonpath_entries.append(rel_entry)
-                else:
-                    all_pythonpath_entries.append(path_entry)
+                rel_entry = self._convert_to_relative_path(path_entry)
+                all_pythonpath_entries.append(rel_entry)
 
         if debug:
             print(f"Debug: _get_module_path_from_file: "
@@ -565,59 +587,82 @@ class ImportLinterChecker(checkers.BaseChecker):
             print(f"Debug: _get_module_path_from_file: "
                   f"all_pythonpath_entries={all_pythonpath_entries}")
 
-        # Try to resolve using PYTHONPATH entries (fallback)
-        for pythonpath_entry in all_pythonpath_entries:
-            if pythonpath_entry and rel_path.startswith(pythonpath_entry):
-                if rel_path.startswith(pythonpath_entry + "/"):
-                    # Remove the PYTHONPATH prefix to get module path
-                    module_path = rel_path[len(pythonpath_entry) + 1:]
-                    result = module_path.replace("/", ".")
-                    if debug:
-                        print(f"Debug: _get_module_path_from_file: PYTHONPATH result={result} "
-                              f"(using entry: {pythonpath_entry})")
-                    return result
-                elif rel_path == pythonpath_entry:
-                    # File is exactly at the PYTHONPATH root
-                    if debug:
-                        print(f"Debug: _get_module_path_from_file: PYTHONPATH root result='' "
-                              f"(using entry: {pythonpath_entry})")
-                    return ""
+        return all_pythonpath_entries
 
-        # Check each target folder to find the module root (fallback)
+    def _convert_to_relative_path(self, path_entry: str) -> str:
+        """Convert a path entry to relative path from current working directory."""
+        if os.path.isabs(path_entry):
+            return os.path.relpath(path_entry, os.getcwd())
+
+        # For relative paths, convert to absolute then back to relative for consistency
+        abs_path = os.path.abspath(path_entry)
+        return os.path.relpath(abs_path, os.getcwd())
+
+    def _resolve_with_pythonpath_entry(self, rel_path: str,
+                                       pythonpath_entry: str,
+                                       debug: bool) -> str | None:
+        """Try to resolve module path using a specific PYTHONPATH entry."""
+        if not pythonpath_entry or not rel_path.startswith(pythonpath_entry):
+            return None
+
+        if rel_path.startswith(pythonpath_entry + "/"):
+            # Remove the PYTHONPATH prefix to get module path
+            module_path = rel_path[len(pythonpath_entry) + 1:]
+            result = module_path.replace("/", ".")
+            if debug:
+                print(f"Debug: _get_module_path_from_file: PYTHONPATH result={result} "
+                      f"(using entry: {pythonpath_entry})")
+            return result
+        elif rel_path == pythonpath_entry:
+            # File is exactly at the PYTHONPATH root
+            if debug:
+                print(f"Debug: _get_module_path_from_file: PYTHONPATH root result='' "
+                      f"(using entry: {pythonpath_entry})")
+            return ""
+
+        return None
+
+    def _try_target_folder_resolution(self, rel_path: str, target_folders,
+                                      debug: bool) -> str | None:
+        """Try to resolve using target folders."""
         for target_folder in target_folders:
-            if rel_path.startswith(target_folder + "/"):
-                if debug:
-                    print(
-                        f"Debug: _get_module_path_from_file: "
-                        f"checking target_folder={target_folder}"
-                    )
-
-                # If no PYTHONPATH match, use target folder logic as fallback
-                module_path = rel_path[len(target_folder) + 1 :]
-                # Use the last part of target folder as root module
-                root_module = target_folder.split("/")[-1]
-                result = f"{root_module}.{module_path}" if module_path else root_module
-                result = result.replace("/", ".")
-
-                if debug:
-                    print(f"Debug: _get_module_path_from_file: target folder result={result}")
+            result = self._resolve_with_target_folder(rel_path, target_folder, debug)
+            if result is not None:
                 return result
-            elif rel_path == target_folder:
-                # File is exactly at the target folder root
-                root_module = target_folder.split("/")[-1]
-                result = root_module
+        return None
 
-                if debug:
-                    print(
-                        f"Debug: _get_module_path_from_file: "
-                        f"root target folder result={result}"
-                    )
-                return result
+    def _resolve_with_target_folder(self, rel_path: str, target_folder: str,
+                                    debug: bool) -> str | None:
+        """Try to resolve module path using a specific target folder."""
+        if rel_path.startswith(target_folder + "/"):
+            if debug:
+                print(f"Debug: _get_module_path_from_file: checking target_folder={target_folder}")
 
-        # Fallback: convert relative path to module path
+            # If no PYTHONPATH match, use target folder logic as fallback
+            module_path = rel_path[len(target_folder) + 1:]
+            # Use the last part of target folder as root module
+            root_module = target_folder.split("/")[-1]
+            result = f"{root_module}.{module_path}" if module_path else root_module
+            result = result.replace("/", ".")
+
+            if debug:
+                print(f"Debug: _get_module_path_from_file: target folder result={result}")
+            return result
+        elif rel_path == target_folder:
+            # File is exactly at the target folder root
+            root_module = target_folder.split("/")[-1]
+            if debug:
+                print(f"Debug: _get_module_path_from_file: root target folder result={root_module}")
+            return root_module
+
+        return None
+
+    def _fallback_resolution(self, rel_path: str, target_folders, debug: bool) -> str:
+        """Fallback resolution strategy."""
         result = rel_path.replace("/", ".")
         if debug:
             print(f"Debug: _get_module_path_from_file: fallback result={result}")
+        return result
         return result
 
     def _check_individual_imports(self) -> None:
@@ -742,192 +787,265 @@ class ImportLinterChecker(checkers.BaseChecker):
     ) -> bool:
         """Check if a specific import violates a specific contract."""
         try:
-            # For forbidden contracts, check if the import matches source -> forbidden pattern
-            if hasattr(contract, "forbidden_modules") and hasattr(contract, "source_modules"):
-                # First, check if this specific import matches any violations in metadata
-                if hasattr(contract_check, "metadata") and contract_check.metadata:
-                    metadata = contract_check.metadata
-                    if "invalid_chains" in metadata:
-                        for chain_info in metadata["invalid_chains"]:
-                            if "chains" in chain_info:
-                                for chain in chain_info["chains"]:
-                                    for link in chain:
-                                        if "importer" in link and "imported" in link:
-                                            # Check if this import matches the violation
-                                            violation_importer = link["importer"]
-                                            violation_imported = link["imported"]
-                                            
-                                            if debug:
-                                                print(f"Debug: Testing violation match:")
-                                                print(f"  current_module={current_module}")
-                                                print(f"  imported_module={imported_module}")
-                                                print(f"  violation_importer={violation_importer}")
-                                                print(f"  violation_imported={violation_imported}")
-                                            
-                                            # Try exact match first
-                                            if (current_module == violation_importer
-                                                    and imported_module == violation_imported):
-                                                if debug:
-                                                    print(f"Debug: EXACT MATCH found! "
-                                                          f"{current_module} -> {imported_module}")
-                                                return True
-                                            
-                                            # Try partial match - check if current module is suffix
-                                            if (violation_importer.endswith(current_module)
-                                                    and imported_module == violation_imported):
-                                                if debug:
-                                                    print(f"Debug: SUFFIX MATCH found! "
-                                                          f"{current_module} matches "
-                                                          f"{violation_importer} -> "
-                                                          f"{imported_module}")
-                                                return True
-                                            
-                                            # Try prefix match - check if current module is prefix
-                                            if (current_module.endswith(violation_importer)
-                                                    and imported_module == violation_imported):
-                                                if debug:
-                                                    print(f"Debug: PREFIX MATCH found! "
-                                                          f"{current_module} matches "
-                                                          f"{violation_importer} -> "
-                                                          f"{imported_module}")
-                                                return True
-                                            
-                                            # Check if imported module starts with violation_imported
-                                            # (e.g., billing_domain.apps.billing.models
-                                            # starts with billing_domain)
-                                            if (violation_importer.endswith(current_module)
-                                                    and imported_module.startswith(
-                                                        violation_imported + ".")):
-                                                if debug:
-                                                    print(
-                                                        "Debug: IMPORTED MODULE PREFIX MATCH found! "
-                                                        f"{current_module} matches "
-                                                        f"{violation_importer} -> "
-                                                        f"{imported_module} starts with "
-                                                        f"{violation_imported}")
-                                                return True
-
-                                            # Alternative: Check if the current_module contains
-                                            # the violation_importer as a suffix/imported matches
-                                            if (violation_importer in current_module
-                                                    and imported_module.startswith(
-                                                        violation_imported)):
-                                                if debug:
-                                                    print(f"Debug: CONTAINS MATCH found! "
-                                                          f"{current_module} contains "
-                                                          f"{violation_importer} -> "
-                                                          f"{imported_module} starts with "
-                                                          f"{violation_imported}")
-                                                return True
-                                            
-                                            # More flexible matching: check if violation_importer
-                                            # ends with current_module and imported module matches
-                                            if (violation_importer.endswith(f".{current_module}")
-                                                    and imported_module.startswith(
-                                                        violation_imported)):
-                                                if debug:
-                                                    print(f"Debug: FLEXIBLE SUFFIX MATCH found! "
-                                                          f"{violation_importer} ends with "
-                                                          f".{current_module} -> "
-                                                          f"{imported_module} starts with "
-                                                          f"{violation_imported}")
-                                                return True
-
-                # Fallback to pattern matching if no direct violation match
-                source_match = any(
-                    self._module_matches_pattern(current_module, source_pattern)
-                    for source_pattern in contract.source_modules
+            if self._is_forbidden_contract(contract):
+                return self._check_forbidden_contract(
+                    contract, contract_check, current_module, imported_module, debug
                 )
-
-                # Check if imported module matches any forbidden module pattern
-                forbidden_match = any(
-                    self._module_matches_pattern(imported_module, forbidden_pattern)
-                    for forbidden_pattern in contract.forbidden_modules
+            elif self._is_independence_contract(contract):
+                return self._check_independence_contract(
+                    contract, current_module, imported_module, debug
                 )
-
-                if debug:
-                    print(
-                        f"Debug: Forbidden contract check - source_match: {source_match}, "
-                        f"forbidden_match: {forbidden_match}"
-                    )
-
-                return source_match and forbidden_match
-
-            # For independence contracts, check if modules are supposed to be independent
-            if hasattr(contract, "modules"):
-                # Check if both modules are in the independence group
-                current_in_group = any(
-                    self._module_matches_pattern(current_module, module_pattern)
-                    for module_pattern in contract.modules
+            elif self._is_whitelist_contract(contract):
+                return self._check_whitelist_contract(
+                    contract, contract_check, current_module, imported_module, debug
                 )
-                imported_in_group = any(
-                    self._module_matches_pattern(imported_module, module_pattern)
-                    for module_pattern in contract.modules
-                )
-
-                if debug:
-                    print(
-                        f"Debug: Independence contract check - "
-                        f"current_in_group: {current_in_group}, "
-                        f"imported_in_group: {imported_in_group}"
-                    )
-
-                # Independence violation if both are in the group but different modules
-                return (
-                    current_in_group
-                    and imported_in_group
-                    and not self._modules_are_same_domain(current_module, imported_module)
-                )
-
-            # For whitelist contracts, check if the import is not in the allowed modules
-            if hasattr(contract, "source_modules") and hasattr(contract, "allowed_modules"):
-                # Check if the current module matches any source module pattern
-                source_match = any(
-                    self._module_matches_pattern(current_module, source_pattern)
-                    for source_pattern in contract.source_modules
-                )
-
-                if source_match:
-                    # Only flag imports that are explicitly violations detected by import-linter
-                    if hasattr(contract_check, "metadata") and contract_check.metadata:
-                        metadata = contract_check.metadata
-                        if "invalid_chains" in metadata:
-                            for chain_info in metadata["invalid_chains"]:
-                                if "chains" in chain_info:
-                                    for chain in chain_info["chains"]:
-                                        for link in chain:
-                                            if "importer" in link and "imported" in link:
-                                                violation_importer = link["importer"]
-                                                violation_imported = link["imported"]
-                                                
-                                                if debug:
-                                                    print("Debug: Testing violation match:")
-                                                    print(f"  current_module={current_module}")
-                                                    print(f"  imported_module={imported_module}")
-                                                    print(f"  violation_importer="
-                                                          f"{violation_importer}")
-                                                    print(f"  violation_imported="
-                                                          f"{violation_imported}")
-                                                
-                                                # Check if this is the exact violation
-                                                if (violation_importer == current_module
-                                                        and imported_module.startswith(
-                                                            violation_imported)):
-                                                    if debug:
-                                                        print("Debug: EXACT VIOLATION MATCH found!")
-                                                    return True
-
-                    # For whitelist contracts, only flag explicit violations
-                    # This allows framework imports like Django that aren't in allowed_modules
-                    # but aren't actual violations detected by import-linter
-                    return False
-
             return False
 
         except (AttributeError, TypeError) as e:
             if debug:
                 print(f"Debug: Exception in _check_contract_against_import: {e}")
             return False
+
+    def _is_forbidden_contract(self, contract) -> bool:
+        """Check if contract is a forbidden contract."""
+        return hasattr(contract, "forbidden_modules") and hasattr(contract, "source_modules")
+
+    def _is_independence_contract(self, contract) -> bool:
+        """Check if contract is an independence contract."""
+        return hasattr(contract, "modules")
+
+    def _is_whitelist_contract(self, contract) -> bool:
+        """Check if contract is a whitelist contract."""
+        return hasattr(contract, "source_modules") and hasattr(contract, "allowed_modules")
+
+    def _check_forbidden_contract(
+        self, contract, contract_check, current_module: str, imported_module: str, debug: bool
+    ) -> bool:
+        """Check forbidden contract violations."""
+        # First, check if this specific import matches any violations in metadata
+        if self._check_metadata_violations(
+            contract_check, current_module, imported_module, debug
+        ):
+            return True
+
+        # Fallback to pattern matching if no direct violation match
+        return self._check_forbidden_pattern_match(contract, current_module, imported_module, debug)
+
+    def _check_independence_contract(
+        self, contract, current_module: str, imported_module: str, debug: bool
+    ) -> bool:
+        """Check independence contract violations."""
+        current_in_group = any(
+            self._module_matches_pattern(current_module, module_pattern)
+            for module_pattern in contract.modules
+        )
+        imported_in_group = any(
+            self._module_matches_pattern(imported_module, module_pattern)
+            for module_pattern in contract.modules
+        )
+
+        if debug:
+            print(
+                f"Debug: Independence contract check - "
+                f"current_in_group: {current_in_group}, "
+                f"imported_in_group: {imported_in_group}"
+            )
+
+        return (
+            current_in_group
+            and imported_in_group
+            and not self._modules_are_same_domain(current_module, imported_module)
+        )
+
+    def _check_whitelist_contract(
+        self, contract, contract_check, current_module: str, imported_module: str, debug: bool
+    ) -> bool:
+        """Check whitelist contract violations."""
+        source_match = any(
+            self._module_matches_pattern(current_module, source_pattern)
+            for source_pattern in contract.source_modules
+        )
+
+        if not source_match:
+            return False
+
+        # Only flag imports that are explicitly violations detected by import-linter
+        return self._check_explicit_violations(
+            contract_check, current_module, imported_module, debug
+        )
+
+    def _check_metadata_violations(
+        self, contract_check, current_module: str, imported_module: str, debug: bool
+    ) -> bool:
+        """Check if import matches any violations in contract metadata."""
+        if not (hasattr(contract_check, "metadata") and contract_check.metadata):
+            return False
+
+        metadata = contract_check.metadata
+        if "invalid_chains" not in metadata:
+            return False
+
+        for chain_info in metadata["invalid_chains"]:
+            if "chains" in chain_info:
+                for chain in chain_info["chains"]:
+                    for link in chain:
+                        if "importer" in link and "imported" in link:
+                            if self._matches_violation_link(
+                                link, current_module, imported_module, debug
+                            ):
+                                return True
+        return False
+
+    def _matches_violation_link(
+        self, link: dict, current_module: str, imported_module: str, debug: bool
+    ) -> bool:
+        """Check if an import matches a specific violation link."""
+        violation_importer = link["importer"]
+        violation_imported = link["imported"]
+
+        if debug:
+            print("Debug: Testing violation match:")
+            print(f"  current_module={current_module}")
+            print(f"  imported_module={imported_module}")
+            print(f"  violation_importer={violation_importer}")
+            print(f"  violation_imported={violation_imported}")
+
+        # Try multiple matching strategies
+        return (
+            self._exact_match(current_module, imported_module,
+                              violation_importer, violation_imported, debug)
+            or self._suffix_match(current_module, imported_module,
+                                  violation_importer, violation_imported, debug)
+            or self._prefix_match(current_module, imported_module,
+                                  violation_importer, violation_imported, debug)
+            or self._module_prefix_match(current_module, imported_module,
+                                         violation_importer, violation_imported, debug)
+            or self._contains_match(current_module, imported_module,
+                                    violation_importer, violation_imported, debug)
+            or self._flexible_suffix_match(current_module, imported_module,
+                                           violation_importer, violation_imported, debug)
+        )
+
+    def _exact_match(self, current_module: str, imported_module: str,
+                     violation_importer: str, violation_imported: str,
+                     debug: bool) -> bool:
+        """Check exact match between modules."""
+        if current_module == violation_importer and imported_module == violation_imported:
+            if debug:
+                print(f"Debug: EXACT MATCH found! {current_module} -> {imported_module}")
+            return True
+        return False
+
+    def _suffix_match(self, current_module: str, imported_module: str,
+                     violation_importer: str, violation_imported: str, debug: bool) -> bool:
+        """Check if current module is suffix of violation importer."""
+        if violation_importer.endswith(current_module) and imported_module == violation_imported:
+            if debug:
+                print(f"Debug: SUFFIX MATCH found! {current_module} "
+                      f"matches {violation_importer} -> {imported_module}")
+            return True
+        return False
+
+    def _prefix_match(self, current_module: str, imported_module: str,
+                     violation_importer: str, violation_imported: str, debug: bool) -> bool:
+        """Check if current module is prefix of violation importer."""
+        if current_module.endswith(violation_importer) and imported_module == violation_imported:
+            if debug:
+                print(f"Debug: PREFIX MATCH found! {current_module} "
+                      f"matches {violation_importer} -> {imported_module}")
+            return True
+        return False
+
+    def _module_prefix_match(self, current_module: str, imported_module: str,
+                           violation_importer: str, violation_imported: str, debug: bool) -> bool:
+        """Check if imported module starts with violation imported."""
+        if (violation_importer.endswith(current_module)
+                and imported_module.startswith(violation_imported + ".")):
+            if debug:
+                print(f"Debug: IMPORTED MODULE PREFIX MATCH found! "
+                      f"{current_module} matches {violation_importer} -> "
+                      f"{imported_module} starts with {violation_imported}")
+            return True
+        return False
+
+    def _contains_match(self, current_module: str, imported_module: str,
+                       violation_importer: str, violation_imported: str, debug: bool) -> bool:
+        """Check if current module contains violation importer."""
+        if (violation_importer in current_module
+                and imported_module.startswith(violation_imported)):
+            if debug:
+                print(f"Debug: CONTAINS MATCH found! {current_module} "
+                      f"contains {violation_importer} -> {imported_module} "
+                      f"starts with {violation_imported}")
+            return True
+        return False
+
+    def _flexible_suffix_match(self, current_module: str, imported_module: str,
+                             violation_importer: str, violation_imported: str, debug: bool) -> bool:
+        """Check flexible suffix match with dot separator."""
+        if (violation_importer.endswith(f".{current_module}")
+                and imported_module.startswith(violation_imported)):
+            if debug:
+                print(f"Debug: FLEXIBLE SUFFIX MATCH found! {violation_importer} ends with "
+                      f".{current_module} -> {imported_module} starts with {violation_imported}")
+            return True
+        return False
+
+    def _check_forbidden_pattern_match(
+        self, contract, current_module: str, imported_module: str, debug: bool
+    ) -> bool:
+        """Check forbidden contract using pattern matching."""
+        source_match = any(
+            self._module_matches_pattern(current_module, source_pattern)
+            for source_pattern in contract.source_modules
+        )
+
+        forbidden_match = any(
+            self._module_matches_pattern(imported_module, forbidden_pattern)
+            for forbidden_pattern in contract.forbidden_modules
+        )
+
+        if debug:
+            print(f"Debug: Forbidden contract check - source_match: {source_match}, "
+                  f"forbidden_match: {forbidden_match}")
+
+        return source_match and forbidden_match
+
+    def _check_explicit_violations(
+        self, contract_check, current_module: str, imported_module: str, debug: bool
+    ) -> bool:
+        """Check only explicit violations for whitelist contracts."""
+        if not (hasattr(contract_check, "metadata") and contract_check.metadata):
+            return False
+
+        metadata = contract_check.metadata
+        if "invalid_chains" not in metadata:
+            return False
+
+        for chain_info in metadata["invalid_chains"]:
+            if "chains" in chain_info:
+                for chain in chain_info["chains"]:
+                    for link in chain:
+                        if "importer" in link and "imported" in link:
+                            violation_importer = link["importer"]
+                            violation_imported = link["imported"]
+
+                            if debug:
+                                print("Debug: Testing violation match:")
+                                print(f"  current_module={current_module}")
+                                print(f"  imported_module={imported_module}")
+                                print(f"  violation_importer={violation_importer}")
+                                print(f"  violation_imported={violation_imported}")
+
+                            # Check if this is the exact violation
+                            if (violation_importer == current_module
+                                    and imported_module.startswith(violation_imported)):
+                                if debug:
+                                    print("Debug: EXACT VIOLATION MATCH found!")
+                                return True
+
+        # For whitelist contracts, only flag explicit violations
+        return False
 
     def _module_matches_pattern(self, module: str, pattern) -> bool:
         """Check if a module matches a pattern (with wildcard support)."""
