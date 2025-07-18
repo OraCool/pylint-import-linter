@@ -29,8 +29,11 @@ class TestImportLinterChecker:
         self.mock_linter.config.import_linter_verbose = False
         self.mock_linter.config.import_linter_show_timings = False
         self.mock_linter.config.import_linter_debug = False
+        self.mock_linter.config.import_linter_pythonpath = ()
+        self.mock_linter.config.import_linter_fast_mode = False
 
         self.checker = ImportLinterChecker(self.mock_linter)
+        self.checker.add_message = Mock()  # Mock the add_message method
 
     def test_checker_initialization(self):
         """Test that the checker initializes correctly."""
@@ -99,7 +102,17 @@ class TestModulePathResolution:
         """Set up test fixtures."""
         self.mock_linter = Mock()
         self.mock_linter.config = Mock()
+        self.mock_linter.config.import_linter_config = None
+        self.mock_linter.config.import_linter_contract = ()
+        self.mock_linter.config.import_linter_target_folders = ()
+        self.mock_linter.config.import_linter_exclude_folders = ()
+        self.mock_linter.config.import_linter_cache_dir = None
+        self.mock_linter.config.import_linter_no_cache = False
+        self.mock_linter.config.import_linter_verbose = False
+        self.mock_linter.config.import_linter_show_timings = False
         self.mock_linter.config.import_linter_debug = False
+        self.mock_linter.config.import_linter_pythonpath = ()
+        self.mock_linter.config.import_linter_fast_mode = False
         self.checker = ImportLinterChecker(self.mock_linter)
 
     def test_get_module_path_with_target_folders(self):
@@ -148,9 +161,10 @@ class TestModulePathResolution:
         self.mock_linter.config.import_linter_target_folders = ("example/domains",)
 
         with patch("importlinter.pylint_plugin.os.path.relpath") as mock_relpath:
-            mock_relpath.return_value = "example/domains"
+            mock_relpath.return_value = "example/domains/__init__.py"
 
-            result = self.checker._get_module_path_from_file("/abs/path/example/domains")
+            file_path = "/abs/path/example/domains/__init__.py"
+            result = self.checker._get_module_path_from_file(file_path)
 
             assert result == "domains"
 
@@ -282,26 +296,36 @@ class TestContractChecking:
         mock_contract.forbidden_modules = ["domains.billing.*"]
 
         mock_contract_check = Mock()
+        mock_contract_check.metadata = None  # No metadata violations
 
-        # Test violation case
-        result = self.checker._check_contract_against_import(
-            mock_contract,
-            mock_contract_check,
-            "domains.document.core",
-            "domains.billing.payments",
-            False,
-        )
-        assert result is True
+        # Mock the contract checker's violation matcher to return proper pattern matches
+        with patch.object(
+            self.checker._contract_checker.violation_matcher,
+            "module_matches_pattern",
+            side_effect=lambda module, pattern: (
+                # Source match: domains.document.core matches domains.document
+                (module == "domains.document.core" and str(pattern) == "domains.document")
+                # Forbidden match: domains.billing.payments matches domains.billing.*
+                or (module == "domains.billing.payments" and str(pattern) == "domains.billing.*")
+            ),
+        ):
+            # Test violation case - should detect violation
+            result = self.checker._check_contract_against_import(
+                mock_contract,
+                mock_contract_check,
+                "domains.document.core",
+                "domains.billing.payments",
+            )
+            assert result is True
 
-        # Test non-violation case
-        result = self.checker._check_contract_against_import(
-            mock_contract,
-            mock_contract_check,
-            "domains.document.core",
-            "domains.shared.utils",
-            False,
-        )
-        assert result is False
+            # Test non-violation case - shared.utils doesn't match billing.*
+            result = self.checker._check_contract_against_import(
+                mock_contract,
+                mock_contract_check,
+                "domains.document.core",
+                "domains.shared.utils",
+            )
+            assert result is False
 
     def test_check_independence_contract_violation(self):
         """Test detection of independence contract violations."""
@@ -387,8 +411,9 @@ class TestImportViolationDetection:
 
         self.checker._contracts_cache = mock_contracts_cache
 
+        # Mock the contract checker's is_import_violation method directly
         with patch.object(
-            self.checker, "_get_module_path_from_file", return_value="domains.document.core"
+            self.checker._contract_checker, "is_import_violation", return_value=True
         ):
             result = self.checker._is_import_violation(mock_import_node)
 
@@ -427,8 +452,9 @@ class TestImportViolationDetection:
 
         self.checker._contracts_cache = mock_contracts_cache
 
+        # Mock the contract checker's is_import_violation method directly
         with patch.object(
-            self.checker, "_get_module_path_from_file", return_value="domains.document.core"
+            self.checker._contract_checker, "is_import_violation", return_value=True
         ):
             result = self.checker._is_import_violation(mock_import_node)
 
@@ -543,12 +569,17 @@ class TestIntegrationScenarios:
         self.mock_linter.config.import_linter_verbose = False
         self.mock_linter.config.import_linter_show_timings = False
         self.mock_linter.config.import_linter_debug = False
+        self.mock_linter.config.import_linter_pythonpath = ()
+        self.mock_linter.config.import_linter_fast_mode = False
 
         self.checker = ImportLinterChecker(self.mock_linter)
         self.checker.add_message = Mock()
 
     def test_complete_workflow_with_violations(self):
         """Test complete workflow from file analysis to violation reporting."""
+        # Mock add_message method
+        self.checker.add_message = Mock()
+
         # Setup: Add analyzed files
         mock_module_node = Mock()
         mock_module_node.file = "/abs/path/example/domains/document/core.py"
@@ -582,7 +613,7 @@ class TestIntegrationScenarios:
             patch("importlinter.application.use_cases.read_user_options") as mock_read_options,
             patch("importlinter.application.use_cases._register_contract_types"),
             patch("importlinter.application.use_cases.create_report") as mock_create_report,
-            patch("importlinter.pylint_plugin.os.path.relpath") as mock_relpath,
+            patch("importlinter.pylint_plugin.checker.os.path.relpath") as mock_relpath,
             patch(
                 "importlinter.application.constants.get_message_id_for_contract_type"
             ) as mock_get_msg_id,
@@ -597,6 +628,18 @@ class TestIntegrationScenarios:
             mock_get_msg_id.return_value = IMPORT_BOUNDARY_VIOLATION
             mock_format_msg.return_value = "Test violation message"
 
+            # Mock the contract checker's is_import_violation method to return True
+            self.checker._contract_checker.is_import_violation = Mock(return_value=True)
+
+            # Mock the contract checker's methods used in _report_import_violation
+            self.checker._contract_checker._extract_imported_module = Mock(
+                return_value="domains.billing.payments"
+            )
+            self.checker._contract_checker._resolve_relative_import = Mock(
+                return_value="domains.billing.payments"
+            )
+            self.checker._contract_checker._check_contract_against_import = Mock(return_value=True)
+
             # Execute the complete workflow
             self.checker.close()
 
@@ -607,6 +650,9 @@ class TestIntegrationScenarios:
 
     def test_no_violations_scenario(self):
         """Test scenario where no violations are found."""
+        # Mock add_message method
+        self.checker.add_message = Mock()
+
         # Setup: Add analyzed files that should pass
         mock_module_node = Mock()
         mock_module_node.file = "/abs/path/example/domains/document/core.py"

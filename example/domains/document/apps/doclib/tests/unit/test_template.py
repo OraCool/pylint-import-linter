@@ -1,4 +1,5 @@
 """Unit tests for template functionality."""
+
 import unittest
 
 # These imports should be caught by import linter rules

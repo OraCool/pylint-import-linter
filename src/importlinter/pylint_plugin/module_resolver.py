@@ -6,12 +6,12 @@ from typing import Optional
 
 class ModulePathResolver:
     """Resolves file paths to proper module paths respecting PYTHONPATH and project structure."""
-    
+
     def __init__(self, config=None, debug: bool = False):
         """Initialize the resolver with configuration."""
         self.config = config
         self.debug = debug
-    
+
     def get_module_path_from_file(self, file_path: str) -> str:
         """Convert file path to proper module path respecting PYTHONPATH."""
         if not file_path:
@@ -27,16 +27,18 @@ class ModulePathResolver:
             print(f"Debug: _get_module_path_from_file: rel_path={rel_path}")
             print(f"Debug: _get_module_path_from_file: target_folders={target_folders}")
 
-        # Remove file extension
-        if rel_path.endswith(".py"):
-            rel_path = rel_path[:-3]
+        # Remove file extension and handle __init__.py
+        if rel_path.endswith("/__init__.py"):
+            rel_path = rel_path[:-12]  # Remove "/__init__.py"
+        elif rel_path.endswith(".py"):
+            rel_path = rel_path[:-3]  # Remove ".py"
 
         # Try different resolution strategies in order of priority
         strategies = [
             self._try_domains_pattern,
             self._try_pythonpath_resolution,
             self._try_target_folder_resolution,
-            self._fallback_resolution
+            self._fallback_resolution,
         ]
 
         for strategy in strategies:
@@ -54,7 +56,8 @@ class ModulePathResolver:
         if self.debug:
             print(f"Debug: checking domains pattern on rel_path={rel_path}")
             print(f"Debug: domains_pattern={domains_pattern}")
-            print(f"Debug: rel_path.startswith(domains_pattern)={rel_path.startswith(domains_pattern)}")
+            starts_with_pattern = rel_path.startswith(domains_pattern)
+            print(f"Debug: rel_path.startswith(domains_pattern)={starts_with_pattern}")
 
         if not rel_path.startswith(domains_pattern):
             if self.debug:
@@ -62,7 +65,7 @@ class ModulePathResolver:
             return None
 
         # Extract the domain name and path after domains/
-        after_domains = rel_path[len(domains_pattern):]
+        after_domains = rel_path[len(domains_pattern) :]
         parts = after_domains.split("/")
 
         if self.debug:
@@ -126,14 +129,16 @@ class ModulePathResolver:
         abs_path = os.path.abspath(path_entry)
         return os.path.relpath(abs_path, os.getcwd())
 
-    def _resolve_with_pythonpath_entry(self, rel_path: str, pythonpath_entry: str) -> Optional[str]:
+    def _resolve_with_pythonpath_entry(
+        self, rel_path: str, pythonpath_entry: str
+    ) -> Optional[str]:
         """Try to resolve module path using a specific PYTHONPATH entry."""
         if not pythonpath_entry or not rel_path.startswith(pythonpath_entry):
             return None
 
         if rel_path.startswith(pythonpath_entry + "/"):
             # Remove the PYTHONPATH prefix to get module path
-            module_path = rel_path[len(pythonpath_entry) + 1:]
+            module_path = rel_path[len(pythonpath_entry) + 1 :]
             result = module_path.replace("/", ".")
             if self.debug:
                 print(f"Debug: PYTHONPATH result={result} (using entry: {pythonpath_entry})")
@@ -161,7 +166,7 @@ class ModulePathResolver:
                 print(f"Debug: checking target_folder={target_folder}")
 
             # If no PYTHONPATH match, use target folder logic as fallback
-            module_path = rel_path[len(target_folder) + 1:]
+            module_path = rel_path[len(target_folder) + 1 :]
             # Use the last part of target folder as root module
             root_module = target_folder.split("/")[-1]
             result = f"{root_module}.{module_path}" if module_path else root_module

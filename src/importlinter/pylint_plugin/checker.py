@@ -35,7 +35,7 @@ class ImportLinterChecker(checkers.BaseChecker):
 
     name = "import-linter"
     msgs = MESSAGES  # type: ignore[assignment]
-    options = PLUGIN_OPTIONS
+    options = PLUGIN_OPTIONS  # type: ignore[assignment]
 
     def __init__(self, linter: PyLinter) -> None:
         super().__init__(linter)
@@ -46,14 +46,12 @@ class ImportLinterChecker(checkers.BaseChecker):
         self._import_nodes: list[Any] = []  # Store import nodes for line-specific reporting
         self._contracts_cache: Any = None  # Cache contracts for import checking
         self._single_file_mode = False  # Track if we're analyzing just one file
-        self._target_module_name = None  # Store the module name being analyzed
-        
+        self._target_module_name: str | None = None  # Store the module name being analyzed
+
         # Initialize helper components immediately with config
-        debug = getattr(linter.config, 'import_linter_debug', False)
+        debug = getattr(linter.config, "import_linter_debug", False)
         self._module_resolver = ModulePathResolver(linter.config, debug=debug)
-        self._contract_checker = ContractChecker(
-            linter.config, self._module_resolver, debug=debug
-        )
+        self._contract_checker = ContractChecker(linter.config, self._module_resolver, debug=debug)
 
     def open(self) -> None:
         """Called when the checker is opened."""
@@ -145,8 +143,10 @@ class ImportLinterChecker(checkers.BaseChecker):
         self._target_module_name = self._module_resolver.get_module_path_from_file(single_file)
 
         if self.linter.config.import_linter_verbose:
-            print(f"Import-linter: Single-file mode optimized for module: "
-                  f"{self._target_module_name}")
+            print(
+                f"Import-linter: Single-file mode optimized for module: "
+                f"{self._target_module_name}"
+            )
 
         # Additional optimizations for single-file mode
         if self.linter.config.import_linter_fast_mode:
@@ -157,11 +157,9 @@ class ImportLinterChecker(checkers.BaseChecker):
     def _check_import_contracts(self) -> None:
         """Run import-linter contract checking."""
         result = self._contract_checker.check_import_contracts(
-            self._first_module_node,
-            self._single_file_mode,
-            self._target_module_name
+            self._first_module_node, self._single_file_mode, self._target_module_name
         )
-        
+
         if result and isinstance(result, dict) and "error" in result:
             # Handle error case
             self.add_message(
@@ -182,18 +180,22 @@ class ImportLinterChecker(checkers.BaseChecker):
         import_nodes_to_check = self._import_nodes
 
         # Optimization for single-file mode with fast mode enabled
-        if (self._single_file_mode
-                and self.linter.config.import_linter_fast_mode
-                and self._target_module_name):
+        if (
+            self._single_file_mode
+            and self.linter.config.import_linter_fast_mode
+            and self._target_module_name
+        ):
             # Filter import nodes to only those from our target file
             import_nodes_to_check = [
-                node for node in self._import_nodes
-                if (hasattr(node.root(), 'file')
-                    and node.root().file in self._analyzed_files)
+                node
+                for node in self._import_nodes
+                if (hasattr(node.root(), "file") and node.root().file in self._analyzed_files)
             ]
             if debug:
-                print(f"Debug: Fast mode filtered to {len(import_nodes_to_check)} "
-                      f"import nodes from {len(self._import_nodes)} total")
+                print(
+                    f"Debug: Fast mode filtered to {len(import_nodes_to_check)} "
+                    f"import nodes from {len(self._import_nodes)} total"
+                )
 
         if debug:
             print(f"Debug: Checking {len(import_nodes_to_check)} import nodes for violations")
@@ -304,3 +306,39 @@ class ImportLinterChecker(checkers.BaseChecker):
     def visit_importfrom(self, node) -> None:
         """Visit from-import nodes to track them for line-specific reporting."""
         self._import_nodes.append(node)
+
+    # Backward compatibility methods for tests
+    def _get_module_path_from_file(self, file_path: str) -> str:
+        """Delegate to module resolver."""
+        return self._module_resolver.get_module_path_from_file(file_path)
+
+    def _get_cache_dir(self):
+        """Delegate to contract checker."""
+        return self._contract_checker._get_cache_dir()
+
+    def _module_matches_pattern(self, module_name: str, pattern) -> bool:
+        """Delegate to violation matcher."""
+        return self._contract_checker.violation_matcher.module_matches_pattern(
+            module_name, pattern
+        )
+
+    def _check_contract_against_import(
+        self,
+        contract,
+        contract_check,
+        current_module: str,
+        imported_module: str,
+        fast_mode: bool = False,
+    ) -> bool:
+        """Delegate to contract checker."""
+        return self._contract_checker._check_contract_against_import(
+            contract, contract_check, current_module, imported_module
+        )
+
+    def _modules_are_same_domain(self, module1: str, module2: str) -> bool:
+        """Delegate to violation matcher."""
+        return self._contract_checker.violation_matcher.modules_are_same_domain(module1, module2)
+
+    def _is_import_violation(self, import_node) -> bool:
+        """Delegate to contract checker."""
+        return self._contract_checker.is_import_violation(import_node, self._contracts_cache)

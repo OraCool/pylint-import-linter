@@ -164,10 +164,10 @@ def lint_imports(
         # Convert relative paths to absolute paths
         if not os.path.isabs(path_entry):
             path_entry = os.path.abspath(path_entry)
-        
+
         if path_entry not in sys.path:
             sys.path.insert(0, path_entry)
-        
+
         # Also set in environment for import-linter
         current_pythonpath = os.environ.get("PYTHONPATH", "")
         if path_entry not in current_pythonpath.split(os.pathsep):

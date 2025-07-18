@@ -1,4 +1,5 @@
 """Integration tests for document workflow."""
+
 import unittest
 
 # These imports should be caught by import linter rules

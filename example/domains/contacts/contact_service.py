@@ -9,11 +9,7 @@ class ContactService:
 
     def add_contact(self, name, email):
         """Add a new contact."""
-        contact = {
-            "name": name,
-            "email": email,
-            "id": len(self.contacts) + 1
-        }
+        contact = {"name": name, "email": email, "id": len(self.contacts) + 1}
         self.contacts.append(contact)
         return contact
 

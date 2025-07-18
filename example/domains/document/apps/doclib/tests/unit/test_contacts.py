@@ -1,4 +1,5 @@
 """Test that imports from contacts domain."""
+
 import unittest
 
 # This import should be caught by import linter rules

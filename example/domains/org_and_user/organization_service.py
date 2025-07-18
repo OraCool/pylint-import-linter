@@ -20,9 +20,7 @@ class OrganizationService(BaseService):
         admin_user = self.user_service.create_user(email=admin_email, name="Admin User")
 
         # Create organization workspace
-        workspace = self.workspace_service.create_workspace(
-            name=org_name, owner_email=admin_email
-        )
+        workspace = self.workspace_service.create_workspace(name=org_name, owner_email=admin_email)
 
         return {"admin": admin_user, "workspace": workspace}
 

@@ -1,6 +1,37 @@
 Changelog
 =========
 
+1.1.6 (2025-07-18)
+------------------
+
+**Major Architectural Improvement and Pylint Plugin Enhancement**
+
+**Plugin Architecture Modernization:**
+- **Modular Package Structure**: Refactored pylint plugin from single module to clean package architecture
+- **Improved Maintainability**: Split functionality across specialized modules (checker, config, contract_checker, module_resolver, violation_matcher)
+- **Enhanced Separation of Concerns**: Each module now handles specific responsibilities for better code organization
+
+**New Features and Improvements:**
+- **Enhanced Module Resolution**: Improved file path to module name conversion with better PYTHONPATH support
+- **Optimized Single-File Analysis**: Fast mode for analyzing individual files without full graph building
+- **Better Error Handling**: More robust error reporting and debugging capabilities
+- **Comprehensive Configuration**: All import-linter CLI options now available as pylint plugin options
+
+**Technical Enhancements:**
+- **Backward Compatibility**: Maintained API compatibility for existing users
+- **Type Safety**: Improved type annotations throughout the codebase
+- **Performance Optimization**: Better caching and analysis strategies for large codebases
+- **Debug Mode**: Enhanced debugging capabilities with verbose output options
+
+**Quality Assurance:**
+- ✅ Core functionality verified and working
+- ✅ Plugin loads correctly with pylint
+- ✅ All configuration options functional
+- ✅ Contract analysis working properly
+- ✅ Package builds and installs successfully
+
+This release significantly improves the plugin's architecture while maintaining full compatibility, making it more maintainable and extensible for future development.
+
 1.1.5 (2025-07-17)
 ------------------
 

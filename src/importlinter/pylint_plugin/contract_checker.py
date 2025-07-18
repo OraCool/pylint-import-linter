@@ -1,27 +1,24 @@
 """Contract checking and violation detection logic."""
 
-from typing import Any, Union, Optional
+from typing import Union, Optional
 from importlinter.application.sentinels import NotSupplied
-from importlinter.application.constants import (
-    IMPORT_CONTRACT_ERROR,
-    format_violation_message,
-    get_message_id_for_contract_type,
-)
+from importlinter.application.constants import IMPORT_CONTRACT_ERROR
 from .violation_matcher import ViolationMatcher
 
 
 class ContractChecker:
     """Handles contract checking and violation reporting."""
-    
+
     def __init__(self, linter_config, module_resolver, debug: bool = False):
         """Initialize the contract checker."""
         self.config = linter_config
         self.module_resolver = module_resolver
         self.debug = debug
         self.violation_matcher = ViolationMatcher(debug=debug)
-    
-    def check_import_contracts(self, first_module_node, single_file_mode: bool, 
-                             target_module_name: Optional[str]):
+
+    def check_import_contracts(
+        self, first_module_node, single_file_mode: bool, target_module_name: Optional[str]
+    ):
         """Run import-linter contract checking."""
         debug = self.debug
         try:
@@ -61,7 +58,7 @@ class ContractChecker:
                     print(f"Import-linter: Contract {i}: {name} (type: {contract_type})")
 
             # Create detailed report with optimizations for single-file mode
-            if (single_file_mode and self.config.import_linter_fast_mode and target_module_name):
+            if single_file_mode and self.config.import_linter_fast_mode and target_module_name:
                 if verbose:
                     print(f"Import-linter: Fast mode enabled for {target_module_name}")
 
@@ -95,8 +92,9 @@ class ContractChecker:
         error_msg = str(error)
         if debug:
             import traceback
+
             error_msg += f"\nDebug traceback:\n{traceback.format_exc()}"
-        
+
         # This would need to be handled by the calling checker
         # For now, return error info
         return {"error": IMPORT_CONTRACT_ERROR, "args": (error_msg,), "node": first_module_node}
@@ -106,9 +104,11 @@ class ContractChecker:
         error_str = str(error)
         exception_name = type(error).__name__
 
-        if ("NotATopLevelModule" in error_str
-                or exception_name == "NotATopLevelModule"
-                or "grimp.exceptions.NotATopLevelModule" in error_str):
+        if (
+            "NotATopLevelModule" in error_str
+            or exception_name == "NotATopLevelModule"
+            or "grimp.exceptions.NotATopLevelModule" in error_str
+        ):
             if self.config.import_linter_verbose or debug:
                 print(
                     "Import-linter: Skipping analysis due to package structure issues. "
@@ -121,6 +121,7 @@ class ContractChecker:
         error_msg = f"Unexpected error: {str(error)}"
         if debug:
             import traceback
+
             error_msg += f"\nDebug traceback:\n{traceback.format_exc()}"
 
         return {"error": IMPORT_CONTRACT_ERROR, "args": (error_msg,), "node": first_module_node}
@@ -190,15 +191,16 @@ class ContractChecker:
             return import_node.names[0][0]
         return None
 
-    def _resolve_relative_import(self, imported_module: str, import_node, 
-                               current_module: str) -> Optional[str]:
+    def _resolve_relative_import(
+        self, imported_module: str, import_node, current_module: str
+    ) -> Optional[str]:
         """Resolve relative imports to absolute module paths."""
-        if imported_module.startswith('.'):
+        if imported_module.startswith("."):
             # Relative import - resolve based on current module
             if current_module:
-                current_package = '.'.join(current_module.split('.')[:-1])
+                current_package = ".".join(current_module.split(".")[:-1])
                 if current_package:
-                    relative_part = imported_module.lstrip('.')
+                    relative_part = imported_module.lstrip(".")
                     if relative_part:
                         return f"{current_package}.{relative_part}"
                     else:
@@ -208,16 +210,17 @@ class ContractChecker:
         elif hasattr(import_node, "level") and import_node.level and import_node.level > 0:
             # This is a from-import with relative level
             if current_module:
-                current_package = '.'.join(current_module.split('.')[:-1])
+                current_package = ".".join(current_module.split(".")[:-1])
                 if current_package:
                     return f"{current_package}.{imported_module}"
                 else:
                     return None
-        
+
         return imported_module
 
-    def _check_contract_against_import(self, contract, contract_check, 
-                                     current_module: str, imported_module: str) -> bool:
+    def _check_contract_against_import(
+        self, contract, contract_check, current_module: str, imported_module: str
+    ) -> bool:
         """Check if a specific import violates a specific contract."""
         try:
             if self._is_forbidden_contract(contract):
@@ -225,9 +228,7 @@ class ContractChecker:
                     contract, contract_check, current_module, imported_module
                 )
             elif self._is_independence_contract(contract):
-                return self._check_independence_contract(
-                    contract, current_module, imported_module
-                )
+                return self._check_independence_contract(contract, current_module, imported_module)
             elif self._is_whitelist_contract(contract):
                 return self._check_whitelist_contract(
                     contract, contract_check, current_module, imported_module
@@ -251,8 +252,9 @@ class ContractChecker:
         """Check if contract is a whitelist contract."""
         return hasattr(contract, "source_modules") and hasattr(contract, "allowed_modules")
 
-    def _check_forbidden_contract(self, contract, contract_check, 
-                                current_module: str, imported_module: str) -> bool:
+    def _check_forbidden_contract(
+        self, contract, contract_check, current_module: str, imported_module: str
+    ) -> bool:
         """Check forbidden contract violations."""
         # First, check if this specific import matches any violations in metadata
         if self._check_metadata_violations(contract_check, current_module, imported_module):
@@ -261,8 +263,9 @@ class ContractChecker:
         # Fallback to pattern matching if no direct violation match
         return self._check_forbidden_pattern_match(contract, current_module, imported_module)
 
-    def _check_independence_contract(self, contract, current_module: str, 
-                                   imported_module: str) -> bool:
+    def _check_independence_contract(
+        self, contract, current_module: str, imported_module: str
+    ) -> bool:
         """Check independence contract violations."""
         current_in_group = any(
             self.violation_matcher.module_matches_pattern(current_module, module_pattern)
@@ -274,9 +277,11 @@ class ContractChecker:
         )
 
         if self.debug:
-            print(f"Debug: Independence contract check - "
-                  f"current_in_group: {current_in_group}, "
-                  f"imported_in_group: {imported_in_group}")
+            print(
+                f"Debug: Independence contract check - "
+                f"current_in_group: {current_in_group}, "
+                f"imported_in_group: {imported_in_group}"
+            )
 
         return (
             current_in_group
@@ -284,8 +289,9 @@ class ContractChecker:
             and not self.violation_matcher.modules_are_same_domain(current_module, imported_module)
         )
 
-    def _check_whitelist_contract(self, contract, contract_check, 
-                                current_module: str, imported_module: str) -> bool:
+    def _check_whitelist_contract(
+        self, contract, contract_check, current_module: str, imported_module: str
+    ) -> bool:
         """Check whitelist contract violations."""
         source_match = any(
             self.violation_matcher.module_matches_pattern(current_module, source_pattern)
@@ -298,8 +304,9 @@ class ContractChecker:
         # Only flag imports that are explicitly violations detected by import-linter
         return self._check_explicit_violations(contract_check, current_module, imported_module)
 
-    def _check_metadata_violations(self, contract_check, current_module: str, 
-                                 imported_module: str) -> bool:
+    def _check_metadata_violations(
+        self, contract_check, current_module: str, imported_module: str
+    ) -> bool:
         """Check if import matches any violations in contract metadata."""
         if not (hasattr(contract_check, "metadata") and contract_check.metadata):
             return False
@@ -319,8 +326,9 @@ class ContractChecker:
                                 return True
         return False
 
-    def _check_forbidden_pattern_match(self, contract, current_module: str, 
-                                     imported_module: str) -> bool:
+    def _check_forbidden_pattern_match(
+        self, contract, current_module: str, imported_module: str
+    ) -> bool:
         """Check forbidden contract using pattern matching."""
         source_match = any(
             self.violation_matcher.module_matches_pattern(current_module, source_pattern)
@@ -333,13 +341,16 @@ class ContractChecker:
         )
 
         if self.debug:
-            print(f"Debug: Forbidden contract check - source_match: {source_match}, "
-                  f"forbidden_match: {forbidden_match}")
+            print(
+                f"Debug: Forbidden contract check - source_match: {source_match}, "
+                f"forbidden_match: {forbidden_match}"
+            )
 
         return source_match and forbidden_match
 
-    def _check_explicit_violations(self, contract_check, current_module: str, 
-                                 imported_module: str) -> bool:
+    def _check_explicit_violations(
+        self, contract_check, current_module: str, imported_module: str
+    ) -> bool:
         """Check only explicit violations for whitelist contracts."""
         if not (hasattr(contract_check, "metadata") and contract_check.metadata):
             return False
@@ -364,8 +375,10 @@ class ContractChecker:
                                 print(f"  violation_imported={violation_imported}")
 
                             # Check if this is the exact violation
-                            if (violation_importer == current_module
-                                    and imported_module.startswith(violation_imported)):
+                            if (
+                                violation_importer == current_module
+                                and imported_module.startswith(violation_imported)
+                            ):
                                 if self.debug:
                                     print("Debug: EXACT VIOLATION MATCH found!")
                                 return True

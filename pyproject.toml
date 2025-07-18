@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pylint-import-linter"
-version = "1.1.6"
+version = "1.1.7"
 license = "BSD-2-Clause"
 description = "Enforces rules for the imports within and between Python packages."
 authors = [
@@ -93,6 +93,7 @@ dev-dependencies = [
     "pylint-import-linter",
     "flake8>=7.0.0",
     "pytest-cov>=6.2.1",
+    "tox>=4.27.0",
 ]
 
 [tool.uv.sources]
