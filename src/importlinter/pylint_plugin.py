@@ -267,6 +267,23 @@ class ImportLinterChecker(checkers.BaseChecker):
         except Exception as e:  # pylint: disable=broad-except
             # Handle any other unexpected errors during contract checking
             node_for_message = self._first_module_node
+
+            # Check for specific grimp package resolution errors
+            error_str = str(e)
+            exception_name = type(e).__name__
+
+            if ("NotATopLevelModule" in error_str
+                    or exception_name == "NotATopLevelModule"
+                    or "grimp.exceptions.NotATopLevelModule" in error_str):
+                if self.linter.config.import_linter_verbose or debug:
+                    print(
+                        "Import-linter: Skipping analysis due to package structure issues. "
+                        "This may be caused by hyphenated directory names or "
+                        "non-standard package layouts."
+                    )
+                # Don't report this as an error since it's likely a project structure issue
+                return
+
             error_msg = f"Unexpected error: {str(e)}"
             if debug:
                 import traceback
@@ -483,12 +500,14 @@ class ImportLinterChecker(checkers.BaseChecker):
             debug = self.linter.config.import_linter_debug
 
             # Get the module being imported
+            imported_module = None
             if hasattr(import_node, "modname") and import_node.modname:
                 imported_module = import_node.modname
             elif hasattr(import_node, "names") and import_node.names:
                 # For regular imports, get the first imported name
                 imported_module = import_node.names[0][0]
-            else:
+
+            if not imported_module:
                 return False
 
             # Get the current module path
@@ -498,6 +517,31 @@ class ImportLinterChecker(checkers.BaseChecker):
 
             # Convert file path to module path using configuration
             current_module = self._get_module_path_from_file(current_file)
+
+            # Handle relative imports - expand them to full module paths
+            if imported_module.startswith('.'):
+                # Relative import - resolve based on current module
+                if current_module:
+                    # Get the package part of current module
+                    current_package = '.'.join(current_module.split('.')[:-1])
+                    if current_package:
+                        # Remove leading dots and append to current package
+                        relative_part = imported_module.lstrip('.')
+                        if relative_part:
+                            imported_module = f"{current_package}.{relative_part}"
+                        else:
+                            imported_module = current_package
+                    else:
+                        # Current module is in root, can't resolve relative import
+                        return False
+            elif hasattr(import_node, "level") and import_node.level and import_node.level > 0:
+                # This is a from-import with relative level (from .payments import PaymentService)
+                if current_module:
+                    current_package = '.'.join(current_module.split('.')[:-1])
+                    if current_package:
+                        imported_module = f"{current_package}.{imported_module}"
+                    else:
+                        return False
 
             if debug:
                 print(f"Debug: Checking import {current_module} -> {imported_module}")
@@ -535,7 +579,48 @@ class ImportLinterChecker(checkers.BaseChecker):
         try:
             # For forbidden contracts, check if the import matches source -> forbidden pattern
             if hasattr(contract, "forbidden_modules") and hasattr(contract, "source_modules"):
-                # Check if current module matches any source module pattern
+                # First, check if this specific import matches any violations in metadata
+                if hasattr(contract_check, "metadata") and contract_check.metadata:
+                    metadata = contract_check.metadata
+                    if "invalid_chains" in metadata:
+                        for chain_info in metadata["invalid_chains"]:
+                            if "chains" in chain_info:
+                                for chain in chain_info["chains"]:
+                                    for link in chain:
+                                        if "importer" in link and "imported" in link:
+                                            # Check if this import matches the violation
+                                            violation_importer = link["importer"]
+                                            violation_imported = link["imported"]
+                                            
+                                            # Try exact match first
+                                            if (current_module == violation_importer
+                                                    and imported_module == violation_imported):
+                                                if debug:
+                                                    print(f"Debug: EXACT MATCH found! "
+                                                          f"{current_module} -> {imported_module}")
+                                                return True
+                                            
+                                            # Try partial match - check if current module is suffix
+                                            if (violation_importer.endswith(current_module)
+                                                    and imported_module == violation_imported):
+                                                if debug:
+                                                    print(f"Debug: SUFFIX MATCH found! "
+                                                          f"{current_module} matches "
+                                                          f"{violation_importer} -> "
+                                                          f"{imported_module}")
+                                                return True
+                                            
+                                            # Try prefix match - check if current module is prefix
+                                            if (current_module.endswith(violation_importer)
+                                                    and imported_module == violation_imported):
+                                                if debug:
+                                                    print(f"Debug: PREFIX MATCH found! "
+                                                          f"{current_module} matches "
+                                                          f"{violation_importer} -> "
+                                                          f"{imported_module}")
+                                                return True
+
+                # Fallback to pattern matching if no direct violation match
                 source_match = any(
                     self._module_matches_pattern(current_module, source_pattern)
                     for source_pattern in contract.source_modules
@@ -655,17 +740,44 @@ class ImportLinterChecker(checkers.BaseChecker):
             if not hasattr(self, "_contracts_cache") or not self._contracts_cache:
                 return
 
-            # Get the module being imported
+            # Get the module being imported - use the same logic as _is_import_violation
+            imported_module = None
             if hasattr(import_node, "modname") and import_node.modname:
                 imported_module = import_node.modname
             elif hasattr(import_node, "names") and import_node.names:
                 imported_module = import_node.names[0][0]
-            else:
+
+            if not imported_module:
                 return
 
             # Get the current module path
             current_file = import_node.root().file if hasattr(import_node.root(), "file") else ""
             current_module = self._get_module_path_from_file(current_file)
+
+            # Handle relative imports - expand them to full module paths
+            if imported_module.startswith('.'):
+                # Relative import - resolve based on current module
+                if current_module:
+                    # Get the package part of current module
+                    current_package = '.'.join(current_module.split('.')[:-1])
+                    if current_package:
+                        # Remove leading dots and append to current package
+                        relative_part = imported_module.lstrip('.')
+                        if relative_part:
+                            imported_module = f"{current_package}.{relative_part}"
+                        else:
+                            imported_module = current_package
+                    else:
+                        # Current module is in root, can't resolve relative import
+                        return
+            elif hasattr(import_node, "level") and import_node.level and import_node.level > 0:
+                # This is a from-import with relative level (from .payments import PaymentService)
+                if current_module:
+                    current_package = '.'.join(current_module.split('.')[:-1])
+                    if current_package:
+                        imported_module = f"{current_package}.{imported_module}"
+                    else:
+                        return
 
             # Determine folder message for context
             folder_msg = ""
