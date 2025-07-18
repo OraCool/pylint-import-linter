@@ -466,6 +466,8 @@ repos:
 | `--verbose` | `--import-linter-verbose` | Verbose output |
 | `--show-timings` | `--import-linter-show-timings` | Show timing info |
 | `--debug` | `--import-linter-debug` | Debug mode |
+| `--pythonpath` | `--import-linter-pythonpath` | PYTHONPATH entries |
+| `--fast-mode` | `--import-linter-fast-mode` | Fast mode for single files |
 
 ### Boolean Parameter Format
 
@@ -540,4 +542,83 @@ pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-show-timings=yes \
        --import-linter-no-cache=yes \
        src/
+```
+
+## CLI Usage
+
+The import-linter can also be used as a standalone CLI tool with the new `--import-linter-pythonpath` and `--import-linter-fast-mode` options.
+
+### Basic CLI Usage
+
+```bash
+# Basic contract checking
+lint-imports --config=.importlinter
+
+# With verbose output
+lint-imports --config=.importlinter --verbose
+
+# Target specific folders
+lint-imports --config=.importlinter --target-folders=src,lib
+```
+
+### PYTHONPATH Configuration
+
+```bash
+# Add single path to PYTHONPATH
+lint-imports --config=.importlinter \
+             --pythonpath=src
+
+# Add multiple paths to PYTHONPATH
+lint-imports --config=.importlinter \
+             --pythonpath=src,lib,vendor \
+             --verbose
+
+# Complex project structure
+lint-imports --config=.importlinter \
+             --pythonpath=backend/src,frontend/src,shared \
+             --target-folders=backend,frontend
+```
+
+### Fast Mode for Performance
+
+```bash
+# Enable fast mode for better performance
+lint-imports --config=.importlinter \
+             --fast-mode \
+             --pythonpath=src \
+             --target-folders=src
+
+# Fast mode with caching
+lint-imports --config=.importlinter \
+             --fast-mode \
+             --cache-dir=.import_linter_cache \
+             --pythonpath=src,lib
+
+# Fast mode for development workflow
+lint-imports --config=.importlinter \
+             --fast-mode \
+             --pythonpath=src \
+             --target-folders=src/current_feature \
+             --verbose
+```
+
+### Combined Examples
+
+```bash
+# Production analysis with all optimizations
+lint-imports --config=.importlinter \
+             --pythonpath=src,lib,vendor \
+             --fast-mode \
+             --cache-dir=.import_linter_cache \
+             --target-folders=src \
+             --show-timings \
+             --verbose
+
+# Debug mode with PYTHONPATH
+lint-imports --config=.importlinter \
+             --pythonpath=src,tests \
+             --target-folders=src \
+             --debug \
+             --verbose \
+             --no-cache
 ```

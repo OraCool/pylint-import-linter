@@ -244,6 +244,22 @@ From your project root, run::
 
     lint-imports
 
+**Enhanced CLI with PYTHONPATH and Fast Mode:**
+
+The enhanced CLI supports additional options for better import resolution and performance::
+
+    # Configure PYTHONPATH for import resolution
+    lint-imports --pythonpath=src,lib
+
+    # Enable fast mode for better performance
+    lint-imports --fast-mode --pythonpath=src
+
+    # Combined with other options
+    lint-imports --pythonpath=src,lib,vendor \
+                 --fast-mode \
+                 --target-folders=src \
+                 --verbose
+
 **Option 2: Pylint Plugin Usage**
 
 Run with pylint to integrate into your existing linting workflow::

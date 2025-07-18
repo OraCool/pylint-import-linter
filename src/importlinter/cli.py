@@ -60,6 +60,16 @@ EXIT_STATUS_ERROR = 1
     type=click.Choice(["text", "json", "json2"], case_sensitive=False),
     help="Output format (text for human-readable, json/json2 for structured output).",
 )
+@click.option(
+    "--pythonpath",
+    default=None,
+    help="Comma-separated list of paths to add to PYTHONPATH for import resolution.",
+)
+@click.option(
+    "--fast-mode",
+    is_flag=True,
+    help="Enable fast mode for single-file analysis (skips full graph building).",
+)
 def lint_imports_command(
     config: Optional[str],
     contract: Tuple[str, ...],
@@ -71,6 +81,8 @@ def lint_imports_command(
     show_timings: bool,
     verbose: bool,
     output_format: str,
+    pythonpath: Optional[str],
+    fast_mode: bool,
 ) -> int:
     """
     Check that a project adheres to a set of contracts.
@@ -84,6 +96,11 @@ def lint_imports_command(
     if exclude_folders:
         exclude_folders_list = [f.strip() for f in exclude_folders.split(",")]
 
+    # Parse pythonpath arguments
+    pythonpath_list = []
+    if pythonpath:
+        pythonpath_list = [p.strip() for p in pythonpath.split(",")]
+
     exit_code = lint_imports(
         config_filename=config,
         limit_to_contracts=contract,
@@ -95,6 +112,8 @@ def lint_imports_command(
         show_timings=show_timings,
         verbose=verbose,
         output_format=output_format,
+        pythonpath=tuple(pythonpath_list),
+        fast_mode=fast_mode,
     )
     sys.exit(exit_code)
 
@@ -110,6 +129,8 @@ def lint_imports(
     show_timings: bool = False,
     verbose: bool = False,
     output_format: str = "text",
+    pythonpath: Tuple[str, ...] = (),
+    fast_mode: bool = False,
 ) -> int:
     """
     Check that a project adheres to a set of contracts.
@@ -128,12 +149,37 @@ def lint_imports(
         show_timings:       whether to show the times taken to build the graph and to check
                             each contract.
         verbose:            if True, noisily output progress as it goes along.
+        output_format:      the output format (text, json, json2).
+        pythonpath:         list of paths to add to PYTHONPATH for import resolution.
+        fast_mode:          if True, enable fast mode for single-file analysis.
 
     Returns:
         EXIT_STATUS_SUCCESS or EXIT_STATUS_ERROR.
     """
     # Add current directory to the path, as this doesn't happen automatically.
     sys.path.insert(0, os.getcwd())
+
+    # Add configured PYTHONPATH entries
+    for path_entry in pythonpath:
+        # Convert relative paths to absolute paths
+        if not os.path.isabs(path_entry):
+            path_entry = os.path.abspath(path_entry)
+        
+        if path_entry not in sys.path:
+            sys.path.insert(0, path_entry)
+        
+        # Also set in environment for import-linter
+        current_pythonpath = os.environ.get("PYTHONPATH", "")
+        if path_entry not in current_pythonpath.split(os.pathsep):
+            if current_pythonpath:
+                os.environ["PYTHONPATH"] = f"{path_entry}{os.pathsep}{current_pythonpath}"
+            else:
+                os.environ["PYTHONPATH"] = path_entry
+
+    # Debug output for PYTHONPATH setup
+    if verbose and pythonpath:
+        print(f"Import-linter: Added PYTHONPATH entries: {', '.join(pythonpath)}")
+        print(f"Import-linter: Current PYTHONPATH: {os.environ.get('PYTHONPATH', 'Not set')}")
 
     _configure_logging(verbose)
 
@@ -169,6 +215,8 @@ def lint_imports(
                 exclude_folders=exclude_folders,
                 show_timings=show_timings,
                 verbose=verbose,
+                pythonpath=pythonpath,
+                fast_mode=fast_mode,
             )
 
             # Output JSON format
@@ -234,6 +282,8 @@ def lint_imports(
             is_debug_mode=is_debug_mode,
             show_timings=show_timings,
             verbose=verbose,
+            pythonpath=pythonpath,
+            fast_mode=fast_mode,
         )
 
         return EXIT_STATUS_SUCCESS if passed else EXIT_STATUS_ERROR

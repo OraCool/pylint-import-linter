@@ -498,6 +498,41 @@ class ImportLinterChecker(checkers.BaseChecker):
         if rel_path.endswith(".py"):
             rel_path = rel_path[:-3]
 
+        # FIRST: Check for domains structure patterns to match import-linter expectations
+        # Look for patterns like domains/gwpy-document/document/apps/audit/apps.py
+        # Should resolve to document.apps.audit.apps to match import-linter output
+        domains_pattern = "domains/"
+        if debug:
+            print(f"Debug: _get_module_path_from_file: checking domains pattern "
+                  f"on rel_path={rel_path}")
+            print(f"Debug: _get_module_path_from_file: domains_pattern={domains_pattern}")
+            print(f"Debug: _get_module_path_from_file: rel_path.startswith(domains_pattern)="
+                  f"{rel_path.startswith(domains_pattern)}")
+        if rel_path.startswith(domains_pattern):
+            # Extract the domain name and path after domains/
+            after_domains = rel_path[len(domains_pattern):]
+            parts = after_domains.split("/")
+            
+            if debug:
+                print(f"Debug: _get_module_path_from_file: "
+                      f"after_domains={after_domains}, parts={parts}")
+            
+            if len(parts) >= 2:
+                # For domains/gwpy-document/document/apps/audit/apps
+                # parts = ['gwpy-document', 'document', 'apps', 'audit', 'apps']
+                # We want to use everything starting from the second part: document.apps.audit.apps
+                domain_module_parts = parts[1:]  # Skip gwpy-document prefix
+                result = ".".join(domain_module_parts)
+                if debug:
+                    print(f"Debug: _get_module_path_from_file: domains pattern result={result}")
+                return result
+            else:
+                if debug:
+                    print(f"Debug: _get_module_path_from_file: not enough parts in domains path")
+        else:
+            if debug:
+                print(f"Debug: _get_module_path_from_file: rel_path does not start with domains/")
+
         # Get PYTHONPATH entries - combine configured entries with environment
         configured_pythonpath = self.linter.config.import_linter_pythonpath or ()
         env_pythonpath = os.environ.get("PYTHONPATH", "").split(":")
@@ -525,10 +560,12 @@ class ImportLinterChecker(checkers.BaseChecker):
                     all_pythonpath_entries.append(path_entry)
 
         if debug:
-            print(f"Debug: _get_module_path_from_file: configured_pythonpath={configured_pythonpath}")
-            print(f"Debug: _get_module_path_from_file: all_pythonpath_entries={all_pythonpath_entries}")
+            print(f"Debug: _get_module_path_from_file: "
+                  f"configured_pythonpath={configured_pythonpath}")
+            print(f"Debug: _get_module_path_from_file: "
+                  f"all_pythonpath_entries={all_pythonpath_entries}")
 
-        # First, try to resolve using PYTHONPATH entries
+        # Try to resolve using PYTHONPATH entries (fallback)
         for pythonpath_entry in all_pythonpath_entries:
             if pythonpath_entry and rel_path.startswith(pythonpath_entry):
                 if rel_path.startswith(pythonpath_entry + "/"):
@@ -720,6 +757,13 @@ class ImportLinterChecker(checkers.BaseChecker):
                                             violation_importer = link["importer"]
                                             violation_imported = link["imported"]
                                             
+                                            if debug:
+                                                print(f"Debug: Testing violation match:")
+                                                print(f"  current_module={current_module}")
+                                                print(f"  imported_module={imported_module}")
+                                                print(f"  violation_importer={violation_importer}")
+                                                print(f"  violation_imported={violation_imported}")
+                                            
                                             # Try exact match first
                                             if (current_module == violation_importer
                                                     and imported_module == violation_imported):
@@ -746,6 +790,47 @@ class ImportLinterChecker(checkers.BaseChecker):
                                                           f"{current_module} matches "
                                                           f"{violation_importer} -> "
                                                           f"{imported_module}")
+                                                return True
+                                            
+                                            # Check if imported module starts with violation_imported
+                                            # (e.g., billing_domain.apps.billing.models
+                                            # starts with billing_domain)
+                                            if (violation_importer.endswith(current_module)
+                                                    and imported_module.startswith(
+                                                        violation_imported + ".")):
+                                                if debug:
+                                                    print(
+                                                        "Debug: IMPORTED MODULE PREFIX MATCH found! "
+                                                        f"{current_module} matches "
+                                                        f"{violation_importer} -> "
+                                                        f"{imported_module} starts with "
+                                                        f"{violation_imported}")
+                                                return True
+
+                                            # Alternative: Check if the current_module contains
+                                            # the violation_importer as a suffix/imported matches
+                                            if (violation_importer in current_module
+                                                    and imported_module.startswith(
+                                                        violation_imported)):
+                                                if debug:
+                                                    print(f"Debug: CONTAINS MATCH found! "
+                                                          f"{current_module} contains "
+                                                          f"{violation_importer} -> "
+                                                          f"{imported_module} starts with "
+                                                          f"{violation_imported}")
+                                                return True
+                                            
+                                            # More flexible matching: check if violation_importer
+                                            # ends with current_module and imported module matches
+                                            if (violation_importer.endswith(f".{current_module}")
+                                                    and imported_module.startswith(
+                                                        violation_imported)):
+                                                if debug:
+                                                    print(f"Debug: FLEXIBLE SUFFIX MATCH found! "
+                                                          f"{violation_importer} ends with "
+                                                          f".{current_module} -> "
+                                                          f"{imported_module} starts with "
+                                                          f"{violation_imported}")
                                                 return True
 
                 # Fallback to pattern matching if no direct violation match
@@ -793,6 +878,49 @@ class ImportLinterChecker(checkers.BaseChecker):
                     and imported_in_group
                     and not self._modules_are_same_domain(current_module, imported_module)
                 )
+
+            # For whitelist contracts, check if the import is not in the allowed modules
+            if hasattr(contract, "source_modules") and hasattr(contract, "allowed_modules"):
+                # Check if the current module matches any source module pattern
+                source_match = any(
+                    self._module_matches_pattern(current_module, source_pattern)
+                    for source_pattern in contract.source_modules
+                )
+
+                if source_match:
+                    # Only flag imports that are explicitly violations detected by import-linter
+                    if hasattr(contract_check, "metadata") and contract_check.metadata:
+                        metadata = contract_check.metadata
+                        if "invalid_chains" in metadata:
+                            for chain_info in metadata["invalid_chains"]:
+                                if "chains" in chain_info:
+                                    for chain in chain_info["chains"]:
+                                        for link in chain:
+                                            if "importer" in link and "imported" in link:
+                                                violation_importer = link["importer"]
+                                                violation_imported = link["imported"]
+                                                
+                                                if debug:
+                                                    print("Debug: Testing violation match:")
+                                                    print(f"  current_module={current_module}")
+                                                    print(f"  imported_module={imported_module}")
+                                                    print(f"  violation_importer="
+                                                          f"{violation_importer}")
+                                                    print(f"  violation_imported="
+                                                          f"{violation_imported}")
+                                                
+                                                # Check if this is the exact violation
+                                                if (violation_importer == current_module
+                                                        and imported_module.startswith(
+                                                            violation_imported)):
+                                                    if debug:
+                                                        print("Debug: EXACT VIOLATION MATCH found!")
+                                                    return True
+
+                    # For whitelist contracts, only flag explicit violations
+                    # This allows framework imports like Django that aren't in allowed_modules
+                    # but aren't actual violations detected by import-linter
+                    return False
 
             return False
 

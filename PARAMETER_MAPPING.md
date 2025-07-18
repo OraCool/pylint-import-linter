@@ -15,8 +15,8 @@ This document shows the unified parameter mapping between the `lint-imports` CLI
 | `--verbose` | `--import-linter-verbose` | Enable verbose output |
 | `--show-timings` | `--import-linter-show-timings` | Show timing information |
 | `--debug` | `--import-linter-debug` | Enable debug mode |
-| N/A | `--import-linter-fast-mode` | Enable fast mode for single-file analysis (plugin only) |
-| N/A | `--import-linter-pythonpath` | Comma-separated list of paths to add to PYTHONPATH (plugin only) |
+| `--pythonpath` | `--import-linter-pythonpath` | Comma-separated list of paths to add to PYTHONPATH |
+| `--fast-mode` | `--import-linter-fast-mode` | Enable fast mode for single-file analysis |
 
 ## Usage Examples
 
@@ -30,6 +30,19 @@ lint-imports --contract document_domain --contract billing_domain --verbose
 
 # With folder targeting
 lint-imports --target-folders src/domains --cache-dir /tmp/cache --show-timings
+
+# NEW: With PYTHONPATH configuration
+lint-imports --pythonpath=src,lib --verbose
+
+# NEW: With fast mode for performance
+lint-imports --fast-mode --pythonpath=src --target-folders=src
+
+# NEW: Combined advanced usage
+lint-imports --pythonpath=src,lib,vendor \
+             --fast-mode \
+             --target-folders=src \
+             --cache-dir=.cache \
+             --verbose
 ```
 
 ### Plugin Usage

@@ -29,6 +29,8 @@ def lint_imports(
     is_debug_mode: bool = False,
     show_timings: bool = False,
     verbose: bool = False,
+    pythonpath: Tuple[str, ...] = (),
+    fast_mode: bool = False,
 ) -> bool:
     """
     Analyse whether a Python package follows a set of contracts, and report on the results.
@@ -46,6 +48,8 @@ def lint_imports(
         show_timings:       whether to show the times taken to build the graph and to check
                             each contract.
         verbose:            if True, noisily output progress as it goes along.
+        pythonpath:         list of paths to add to PYTHONPATH for import resolution.
+        fast_mode:          if True, enable fast mode for single-file analysis.
 
     Returns:
         True if the linting passed, False if it didn't.
@@ -60,6 +64,31 @@ def lint_imports(
             folder_info.append(f"excluding folders: {', '.join(exclude_folders)}")
         output.print(f"Folder filtering active ({'; '.join(folder_info)})")
 
+    # Add configured PYTHONPATH entries
+    import os
+    import sys
+    for path_entry in pythonpath:
+        # Convert relative paths to absolute paths
+        if not os.path.isabs(path_entry):
+            path_entry = os.path.abspath(path_entry)
+        
+        if path_entry not in sys.path:
+            sys.path.insert(0, path_entry)
+        
+        # Also set in environment for import-linter
+        current_pythonpath = os.environ.get("PYTHONPATH", "")
+        if path_entry not in current_pythonpath.split(os.pathsep):
+            if current_pythonpath:
+                os.environ["PYTHONPATH"] = f"{path_entry}{os.pathsep}{current_pythonpath}"
+            else:
+                os.environ["PYTHONPATH"] = path_entry
+
+    # Debug output for PYTHONPATH setup
+    if verbose and pythonpath:
+        output.print(f"Import-linter: Added PYTHONPATH entries: {', '.join(pythonpath)}")
+        pythonpath_value = os.environ.get('PYTHONPATH', 'Not set')
+        output.print(f"Import-linter: Current PYTHONPATH: {pythonpath_value}")
+
     output.verbose_print(verbose, "Verbose mode.")
     try:
         user_options = read_user_options(config_filename=config_filename)
@@ -72,6 +101,8 @@ def lint_imports(
             verbose,
             target_folders=target_folders,
             exclude_folders=exclude_folders,
+            pythonpath=pythonpath,
+            fast_mode=fast_mode,
         )
     except Exception as e:
         if is_debug_mode:
@@ -120,14 +151,47 @@ def create_report(
     verbose: bool = False,
     target_folders: Tuple[str, ...] = (),
     exclude_folders: Tuple[str, ...] = (),
+    pythonpath: Tuple[str, ...] = (),
+    fast_mode: bool = False,
 ) -> Report:
     """
     Analyse whether a Python package follows a set of contracts, returning a report on the results.
+
+    Args:
+        user_options:       The user options parsed from configuration.
+        limit_to_contracts: if supplied, only lint the contracts with the supplied ids.
+        cache_dir:          the directory to use for caching. Pass None to disable caching.
+        show_timings:       whether to show the times taken to build the graph and to check
+                            each contract.
+        verbose:            if True, noisily output progress as it goes along.
+        target_folders:     if supplied, only check files in these folders.
+        exclude_folders:    if supplied, exclude files in these folders from checking.
+        pythonpath:         list of paths to add to PYTHONPATH for import resolution.
+        fast_mode:          if True, enable fast mode for single-file analysis.
 
     Raises:
         InvalidUserOptions: if the report could not be run due to invalid user configuration,
                             such as a module that could not be imported.
     """
+    # Add configured PYTHONPATH entries
+    import os
+    import sys
+    for path_entry in pythonpath:
+        # Convert relative paths to absolute paths
+        if not os.path.isabs(path_entry):
+            path_entry = os.path.abspath(path_entry)
+        
+        if path_entry not in sys.path:
+            sys.path.insert(0, path_entry)
+        
+        # Also set in environment for import-linter
+        current_pythonpath = os.environ.get("PYTHONPATH", "")
+        if path_entry not in current_pythonpath.split(os.pathsep):
+            if current_pythonpath:
+                os.environ["PYTHONPATH"] = f"{path_entry}{os.pathsep}{current_pythonpath}"
+            else:
+                os.environ["PYTHONPATH"] = path_entry
+
     include_external_packages = _get_include_external_packages(user_options)
     exclude_type_checking_imports = _get_exclude_type_checking_imports(user_options)
 
@@ -151,6 +215,8 @@ def create_report(
         verbose=verbose,
         target_folders=target_folders,
         exclude_folders=exclude_folders,
+        pythonpath=pythonpath,
+        fast_mode=fast_mode,
     )
 
 
@@ -201,6 +267,8 @@ def _build_report(
     verbose: bool,
     target_folders: Tuple[str, ...] = (),
     exclude_folders: Tuple[str, ...] = (),
+    pythonpath: Tuple[str, ...] = (),
+    fast_mode: bool = False,
 ) -> Report:
     report = Report(
         graph=graph, show_timings=show_timings, graph_building_duration=graph_building_duration
