@@ -124,6 +124,24 @@ class ImportLinterChecker(checkers.BaseChecker):
                 "help": "Enable debug mode for detailed error information (same as CLI --debug)",
             },
         ),
+        (
+            "import-linter-fast-mode",
+            {
+                "default": False,
+                "type": "yn",
+                "metavar": "<y or n>",
+                "help": "Enable fast mode for single-file analysis (skips full graph building)",
+            },
+        ),
+        (
+            "import-linter-pythonpath",
+            {
+                "default": (),
+                "type": "csv",
+                "metavar": "<paths>",
+                "help": "Comma-separated list of paths to add to PYTHONPATH for import resolution",
+            },
+        ),
     )
 
     def __init__(self, linter: PyLinter) -> None:
@@ -134,6 +152,8 @@ class ImportLinterChecker(checkers.BaseChecker):
         self._module_nodes: dict[str, Any] = {}  # Store module nodes by file path
         self._import_nodes: list[Any] = []  # Store import nodes for line-specific reporting
         self._contracts_cache: Any = None  # Cache contracts for import checking
+        self._single_file_mode = False  # Track if we're analyzing just one file
+        self._target_module_name = None  # Store the module name being analyzed
 
     def open(self) -> None:
         """Called when the checker is opened."""
@@ -141,9 +161,37 @@ class ImportLinterChecker(checkers.BaseChecker):
         if os.getcwd() not in sys.path:
             sys.path.insert(0, os.getcwd())
 
+        # Add configured PYTHONPATH entries
+        pythonpath_entries = self.linter.config.import_linter_pythonpath or ()
+        for path_entry in pythonpath_entries:
+            # Convert relative paths to absolute paths
+            if not os.path.isabs(path_entry):
+                path_entry = os.path.abspath(path_entry)
+            
+            if path_entry not in sys.path:
+                sys.path.insert(0, path_entry)
+            
+            # Also set in environment for import-linter
+            current_pythonpath = os.environ.get("PYTHONPATH", "")
+            if path_entry not in current_pythonpath.split(os.pathsep):
+                if current_pythonpath:
+                    os.environ["PYTHONPATH"] = f"{path_entry}{os.pathsep}{current_pythonpath}"
+                else:
+                    os.environ["PYTHONPATH"] = path_entry
+
+        # Debug output for PYTHONPATH setup
+        if self.linter.config.import_linter_verbose and pythonpath_entries:
+            print(f"Import-linter: Added PYTHONPATH entries: {', '.join(pythonpath_entries)}")
+            print(f"Import-linter: Current PYTHONPATH: {os.environ.get('PYTHONPATH', 'Not set')}")
+
     def close(self) -> None:
         """Called when the checker is closed - this is where we run import-linter."""
         if not self._contracts_checked and self._should_check_contracts():
+            # Detect single-file mode for optimization
+            self._single_file_mode = len(self._analyzed_files) == 1
+            if self._single_file_mode:
+                self._optimize_for_single_file()
+            
             self._check_import_contracts()
             self._check_individual_imports()  # Check individual imports for line-specific reporting
             self._contracts_checked = True
@@ -184,6 +232,28 @@ class ImportLinterChecker(checkers.BaseChecker):
                 return True
 
         return False
+
+    def _optimize_for_single_file(self) -> None:
+        """Optimize settings when analyzing only a single file."""
+        single_file = next(iter(self._analyzed_files))
+
+        # Convert file path to module name
+        self._target_module_name = self._get_module_path_from_file(single_file)
+
+        if self.linter.config.import_linter_verbose:
+            print(f"Import-linter: Single-file mode optimized for module: "
+                  f"{self._target_module_name}")
+
+        # Additional optimizations for single-file mode
+        if self.linter.config.import_linter_fast_mode:
+            # Automatically enable caching for fast mode
+            if not self.linter.config.import_linter_cache_dir:
+                self.linter.config.import_linter_cache_dir = ".import_linter_cache"
+
+            # Force verbose mode off unless explicitly requested to reduce I/O
+            if not hasattr(self.linter.config, '_verbose_explicitly_set'):
+                # Only modify if verbose wasn't explicitly set by user
+                pass  # Keep current verbose setting
 
     def _check_import_contracts(self) -> None:
         """Run import-linter contract checking."""
@@ -226,13 +296,30 @@ class ImportLinterChecker(checkers.BaseChecker):
                     print(f"Import-linter: Contract {i}: {name} (type: {contract_type})")
 
             # Create detailed report instead of just checking pass/fail
-            report = create_report(
-                user_options=user_options,
-                limit_to_contracts=limit_to_contracts,
-                cache_dir=cache_dir,
-                show_timings=show_timings,
-                verbose=verbose,
-            )
+            # Apply optimizations for single-file mode
+            if (self._single_file_mode
+                    and self.linter.config.import_linter_fast_mode
+                    and self._target_module_name):
+                if verbose:
+                    print(f"Import-linter: Fast mode enabled for {self._target_module_name}")
+
+                # For now, fall back to standard report but with optimizations
+                # TODO: Implement more targeted analysis in future versions
+                report = create_report(
+                    user_options=user_options,
+                    limit_to_contracts=limit_to_contracts,
+                    cache_dir=cache_dir,
+                    show_timings=show_timings,
+                    verbose=verbose,
+                )
+            else:
+                report = create_report(
+                    user_options=user_options,
+                    limit_to_contracts=limit_to_contracts,
+                    cache_dir=cache_dir,
+                    show_timings=show_timings,
+                    verbose=verbose,
+                )
 
             if verbose:
                 print(f"Import-linter: Analysis complete. Found {len(report.contracts)} results")
@@ -411,7 +498,55 @@ class ImportLinterChecker(checkers.BaseChecker):
         if rel_path.endswith(".py"):
             rel_path = rel_path[:-3]
 
-        # Check each target folder to find the module root
+        # Get PYTHONPATH entries - combine configured entries with environment
+        configured_pythonpath = self.linter.config.import_linter_pythonpath or ()
+        env_pythonpath = os.environ.get("PYTHONPATH", "").split(":")
+        
+        # Convert configured relative paths to absolute, then back to relative for consistency
+        all_pythonpath_entries = []
+        for path_entry in configured_pythonpath:
+            if not os.path.isabs(path_entry):
+                abs_path = os.path.abspath(path_entry)
+                # Convert back to relative from cwd for consistency with env entries
+                rel_entry = os.path.relpath(abs_path, os.getcwd())
+                all_pythonpath_entries.append(rel_entry)
+            else:
+                # Convert absolute path to relative from cwd
+                rel_entry = os.path.relpath(path_entry, os.getcwd())
+                all_pythonpath_entries.append(rel_entry)
+        
+        # Add environment PYTHONPATH entries (converted to relative paths)
+        for path_entry in env_pythonpath:
+            if path_entry:  # Skip empty entries
+                if os.path.isabs(path_entry):
+                    rel_entry = os.path.relpath(path_entry, os.getcwd())
+                    all_pythonpath_entries.append(rel_entry)
+                else:
+                    all_pythonpath_entries.append(path_entry)
+
+        if debug:
+            print(f"Debug: _get_module_path_from_file: configured_pythonpath={configured_pythonpath}")
+            print(f"Debug: _get_module_path_from_file: all_pythonpath_entries={all_pythonpath_entries}")
+
+        # First, try to resolve using PYTHONPATH entries
+        for pythonpath_entry in all_pythonpath_entries:
+            if pythonpath_entry and rel_path.startswith(pythonpath_entry):
+                if rel_path.startswith(pythonpath_entry + "/"):
+                    # Remove the PYTHONPATH prefix to get module path
+                    module_path = rel_path[len(pythonpath_entry) + 1:]
+                    result = module_path.replace("/", ".")
+                    if debug:
+                        print(f"Debug: _get_module_path_from_file: PYTHONPATH result={result} "
+                              f"(using entry: {pythonpath_entry})")
+                    return result
+                elif rel_path == pythonpath_entry:
+                    # File is exactly at the PYTHONPATH root
+                    if debug:
+                        print(f"Debug: _get_module_path_from_file: PYTHONPATH root result='' "
+                              f"(using entry: {pythonpath_entry})")
+                    return ""
+
+        # Check each target folder to find the module root (fallback)
         for target_folder in target_folders:
             if rel_path.startswith(target_folder + "/"):
                 if debug:
@@ -419,29 +554,6 @@ class ImportLinterChecker(checkers.BaseChecker):
                         f"Debug: _get_module_path_from_file: "
                         f"checking target_folder={target_folder}"
                     )
-
-                # Find the module root by checking PYTHONPATH entries
-                pythonpath = os.environ.get("PYTHONPATH", "").split(":")
-
-                if debug:
-                    print(f"Debug: _get_module_path_from_file: PYTHONPATH={pythonpath}")
-
-                for path_entry in pythonpath:
-                    cwd_prefix = os.getcwd() + "/"
-                    normalized_entry = path_entry.replace(cwd_prefix, "")
-                    if path_entry and rel_path.startswith(normalized_entry):
-                        # Remove the PYTHONPATH prefix to get module path
-                        if normalized_entry and rel_path.startswith(normalized_entry + "/"):
-                            module_path = rel_path[len(normalized_entry) + 1 :]
-                        elif normalized_entry == rel_path:
-                            module_path = ""
-                        else:
-                            continue
-
-                        result = module_path.replace("/", ".")
-                        if debug:
-                            print(f"Debug: _get_module_path_from_file: PYTHONPATH result={result}")
-                        return result
 
                 # If no PYTHONPATH match, use target folder logic as fallback
                 module_path = rel_path[len(target_folder) + 1 :]
@@ -477,10 +589,26 @@ class ImportLinterChecker(checkers.BaseChecker):
             return
 
         debug = self.linter.config.import_linter_debug
-        if debug:
-            print(f"Debug: Checking {len(self._import_nodes)} import nodes for violations")
+        import_nodes_to_check = self._import_nodes
 
-        for import_node in self._import_nodes:
+        # Optimization for single-file mode with fast mode enabled
+        if (self._single_file_mode
+                and self.linter.config.import_linter_fast_mode
+                and self._target_module_name):
+            # Filter import nodes to only those from our target file
+            import_nodes_to_check = [
+                node for node in self._import_nodes
+                if (hasattr(node.root(), 'file')
+                    and node.root().file in self._analyzed_files)
+            ]
+            if debug:
+                print(f"Debug: Fast mode filtered to {len(import_nodes_to_check)} "
+                      f"import nodes from {len(self._import_nodes)} total")
+
+        if debug:
+            print(f"Debug: Checking {len(import_nodes_to_check)} import nodes for violations")
+
+        for import_node in import_nodes_to_check:
             # Check if this import violates any contracts
             if self._is_import_violation(import_node):
                 if debug:

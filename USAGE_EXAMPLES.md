@@ -20,6 +20,26 @@ pylint --load-plugins=importlinter.pylint_plugin \
        src/
 ```
 
+### With PYTHONPATH Configuration
+
+```bash
+# Configure PYTHONPATH for import resolution
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-pythonpath=src,lib \
+       --import-linter-config=.importlinter \
+       src/
+```
+
+### Fast Mode for Single Files
+
+```bash
+# Enable fast mode for better performance on single files
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-fast-mode=yes \
+       --import-linter-cache-dir=.cache \
+       src/myfile.py
+```
+
 ## Debug and Verbose Mode
 
 ### Full Debug Mode (Recommended for Troubleshooting)
@@ -80,6 +100,7 @@ pylint --load-plugins=importlinter.pylint_plugin \
 pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-config=.importlinter \
        --import-linter-target-folders=src/domains \
+       --import-linter-pythonpath=src \
        --import-linter-debug=yes \
        --import-linter-verbose=yes \
        --disable=all \
@@ -87,13 +108,15 @@ pylint --load-plugins=importlinter.pylint_plugin \
        src/specific_file.py
 ```
 
-### Quick File Check
+### Quick File Check with Fast Mode
 
 ```bash
-# Basic check for single file
+# Fast analysis for single file with optimizations
 pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-config=.importlinter \
        --import-linter-target-folders=src/domains \
+       --import-linter-pythonpath=src \
+       --import-linter-fast-mode=yes \
        --disable=all \
        --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
        src/specific_file.py

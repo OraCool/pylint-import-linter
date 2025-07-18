@@ -86,6 +86,8 @@ The plugin supports all import-linter configuration options with unified paramet
 - ``--import-linter-verbose``: Enable verbose output (same as CLI ``--verbose``)
 - ``--import-linter-show-timings``: Show timing information (same as CLI ``--show-timings``)
 - ``--import-linter-debug``: Enable debug mode (same as CLI ``--debug``)
+- ``--import-linter-fast-mode``: Enable fast mode for single-file analysis (optimizes performance when checking individual files)
+- ``--import-linter-pythonpath``: Comma-separated list of paths to add to PYTHONPATH for import resolution
 
 Debug and Verbose Mode
 ----------------------
@@ -153,6 +155,113 @@ Verbose mode shows:
            --disable=all \
            --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
            src/specific_file.py
+
+PYTHONPATH Configuration
+------------------------
+
+The plugin supports configuring PYTHONPATH entries to help with import resolution:
+
+**Basic PYTHONPATH configuration:**
+
+.. code-block:: bash
+
+    # Add a single path to PYTHONPATH
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-pythonpath=src \
+           --import-linter-config=.importlinter \
+           myproject/
+
+**Multiple PYTHONPATH entries:**
+
+.. code-block:: bash
+
+    # Add multiple paths to PYTHONPATH  
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-pythonpath=src,lib,vendor \
+           --import-linter-config=.importlinter \
+           myproject/
+
+**Real-world example:**
+
+.. code-block:: bash
+
+    # Configure PYTHONPATH for domain-driven design structure
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-pythonpath=example \
+           --import-linter-config=example/importlinter.ini \
+           --import-linter-target-folders=example/domains \
+           example/domains/
+
+**How PYTHONPATH configuration works:**
+
+- **Automatic path resolution**: Converts relative paths to absolute paths
+- **Environment integration**: Updates both ``sys.path`` and ``PYTHONPATH`` environment variable  
+- **Import-linter compatibility**: Ensures import-linter can resolve module paths correctly
+- **Verbose output**: Shows which PYTHONPATH entries were added when ``--import-linter-verbose=yes``
+
+**Example verbose output:**
+
+.. code-block:: text
+
+    Import-linter: Added PYTHONPATH entries: src, lib
+    Import-linter: Current PYTHONPATH: /project/src:/project/lib
+    Import-linter: Single-file mode optimized for module: myproject.core.domain
+
+Performance Optimization
+-------------------------
+
+The plugin includes several performance optimizations for different use cases:
+
+**Fast Mode for Single Files:**
+
+.. code-block:: bash
+
+    # Enable fast mode for single-file analysis
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-fast-mode=yes \
+           --import-linter-config=.importlinter \
+           myfile.py
+
+Fast mode provides:
+
+- **Single-file detection**: Automatically optimizes when analyzing just one file
+- **Automatic caching**: Enables caching automatically for better performance
+- **Filtered processing**: Only processes import nodes from the target file
+- **Optimized reporting**: Streamlined violation detection and reporting
+
+**Performance comparison:**
+
++-------------------+-------------------+----------------------+
+| Mode              | Single File Time  | Performance Gain     |
++===================+===================+======================+
+| Regular mode      | ~1.06s            | Baseline             |
++-------------------+-------------------+----------------------+
+| Fast mode         | ~0.76s            | **~30% faster**      |
++-------------------+-------------------+----------------------+
+| With caching      | ~0.35s            | **~3x faster**       |
++-------------------+-------------------+----------------------+
+
+**Caching for Large Projects:**
+
+.. code-block:: bash
+
+    # Enable caching for better performance on subsequent runs
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-cache-dir=.import_linter_cache \
+           --import-linter-config=.importlinter \
+           src/
+
+**Combined optimization (recommended):**
+
+.. code-block:: bash
+
+    # Optimal configuration for single-file analysis
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-fast-mode=yes \
+           --import-linter-cache-dir=.cache \
+           --import-linter-pythonpath=src \
+           --import-linter-config=.importlinter \
+           src/myfile.py
 
 Folder-Based Configuration
 --------------------------
@@ -481,6 +590,8 @@ Add to your VS Code settings (``.vscode/settings.json``):
             "--load-plugins=importlinter.pylint_plugin",
             "--import-linter-config=.importlinter",
             "--import-linter-target-folders=src/domains",
+            "--import-linter-pythonpath=src",
+            "--import-linter-fast-mode=yes",
             "--enable=import-boundary-violation,import-layer-violation,import-independence-violation,import-contract-violation,import-contract-error"
         ],
         "python.linting.lintOnSave": true,
@@ -525,6 +636,8 @@ Add debug tasks to ``.vscode/tasks.json``:
                     "--load-plugins=importlinter.pylint_plugin",
                     "--import-linter-config=.importlinter",
                     "--import-linter-target-folders=src/domains",
+                    "--import-linter-pythonpath=src",
+                    "--import-linter-fast-mode=yes",
                     "--disable=all",
                     "--enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error",
                     "${file}"

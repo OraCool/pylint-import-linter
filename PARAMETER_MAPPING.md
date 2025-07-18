@@ -15,6 +15,8 @@ This document shows the unified parameter mapping between the `lint-imports` CLI
 | `--verbose` | `--import-linter-verbose` | Enable verbose output |
 | `--show-timings` | `--import-linter-show-timings` | Show timing information |
 | `--debug` | `--import-linter-debug` | Enable debug mode |
+| N/A | `--import-linter-fast-mode` | Enable fast mode for single-file analysis (plugin only) |
+| N/A | `--import-linter-pythonpath` | Comma-separated list of paths to add to PYTHONPATH (plugin only) |
 
 ## Usage Examples
 
@@ -62,12 +64,28 @@ pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-verbose=yes \
        src/
 
-# With folder targeting
+# With folder targeting and performance optimizations
 pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-target-folders=src/domains \
        --import-linter-cache-dir=/tmp/cache \
        --import-linter-show-timings=yes \
+       --import-linter-fast-mode=yes \
        src/
+
+# With PYTHONPATH configuration for import resolution
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-pythonpath=src,lib,vendor \
+       --import-linter-config=.importlinter \
+       --import-linter-verbose=yes \
+       src/
+
+# Optimal single-file analysis
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-pythonpath=src \
+       --import-linter-fast-mode=yes \
+       --import-linter-cache-dir=.cache \
+       --import-linter-verbose=yes \
+       src/myfile.py
 ```
 
 ## Key Differences
