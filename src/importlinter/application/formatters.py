@@ -9,8 +9,8 @@ import json
 from typing import Any
 
 from importlinter.application.constants import (
-    get_message_id_for_contract_type,
     format_violation_message,
+    get_message_id_for_contract_type,
 )
 
 

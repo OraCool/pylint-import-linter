@@ -4,10 +4,10 @@ Enhanced output adapter for capturing import-linter violations in pylint plugin.
 
 from __future__ import annotations
 
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 
-from importlinter.application.ports.reporting import Report
 from importlinter.adapters.printing import ClickPrinter
+from importlinter.application.ports.reporting import Report
 
 
 class PylintOutputAdapter:

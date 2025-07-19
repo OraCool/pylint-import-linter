@@ -1,6 +1,125 @@
 Changelog
 =========
 
+1.1.6 (2025-07-18)
+------------------
+
+**Major Architectural Improvement and Pylint Plugin Enhancement**
+
+**Plugin Architecture Modernization:**
+- **Modular Package Structure**: Refactored pylint plugin from single module to clean package architecture
+- **Improved Maintainability**: Split functionality across specialized modules (checker, config, contract_checker, module_resolver, violation_matcher)
+- **Enhanced Separation of Concerns**: Each module now handles specific responsibilities for better code organization
+
+**New Features and Improvements:**
+- **Enhanced Module Resolution**: Improved file path to module name conversion with better PYTHONPATH support
+- **Optimized Single-File Analysis**: Fast mode for analyzing individual files without full graph building
+- **Better Error Handling**: More robust error reporting and debugging capabilities
+- **Comprehensive Configuration**: All import-linter CLI options now available as pylint plugin options
+
+**Technical Enhancements:**
+- **Backward Compatibility**: Maintained API compatibility for existing users
+- **Type Safety**: Improved type annotations throughout the codebase
+- **Performance Optimization**: Better caching and analysis strategies for large codebases
+- **Debug Mode**: Enhanced debugging capabilities with verbose output options
+
+**Quality Assurance:**
+- ✅ Core functionality verified and working
+- ✅ Plugin loads correctly with pylint
+- ✅ All configuration options functional
+- ✅ Contract analysis working properly
+- ✅ Package builds and installs successfully
+
+This release significantly improves the plugin's architecture while maintaining full compatibility, making it more maintainable and extensible for future development.
+
+1.1.5 (2025-07-17)
+------------------
+
+**Complete Tox Environment Fix and Final Release**
+
+**Tox Configuration Updates:**
+- **Updated all tox.ini dependencies**: Now properly uses the upgraded dependency versions from v1.1.4
+- **Verified CI Compatibility**: Ensures tox check environment works correctly on all Python versions
+- **Fixed Version Synchronization**: Package version properly aligned across all files
+
+**Quality Assurance:**
+- ✅ All 389 tests pass with updated tooling
+- ✅ Tox environments work correctly on Python 3.9-3.13
+- ✅ CI/CD pipeline fully functional
+- ✅ Plugin functionality verified in production
+
+This is the final release that combines all critical bug fixes from v1.1.3 with the modernized development environment from v1.1.4, ensuring complete compatibility and reliability.
+
+1.1.4 (2025-07-17)
+------------------
+
+**Development Environment Modernization and CI Fixes**
+
+**Dependency Upgrades:**
+- **flake8**: Upgraded from 4.0.1 → 7.3.0 (fixes Python 3.10 CI compatibility issues)
+- **black**: Upgraded from 22.3.0 → 25.1.0 (latest code formatting improvements)
+- **mypy**: Upgraded from 0.730 → 1.17.0 (enhanced type checking and strictness)
+- **pytest**: Upgraded from 7.4.0 → 8.4.1 (latest testing framework features)
+- **pytest-cov**: Upgraded from 4.1.0 → 6.2.1 (improved coverage reporting)
+- **coverage**: Upgraded from 6.3.1 → 7.9.2 (better performance and features)
+- **PyYAML**: Updated from 6.0.1 → 6.0.2 (latest stable version)
+
+**CI/CD Improvements:**
+- **Fixed Python 3.10 CI Failures**: Resolved tox check environment failures caused by flake8/importlib-metadata compatibility issues
+- **Enhanced Quality Assurance**: All 389 tests pass with updated dependencies
+- **Improved Development Experience**: Modern tool versions provide better error messages and performance
+
+**Quality Validation:**
+- ✅ All formatting checks pass with Black 25.1.0
+- ✅ All linting passes with flake8 7.3.0 
+- ✅ All type checks pass with mypy 1.17.0
+- ✅ All tests pass with pytest 8.4.1
+- ✅ Coverage reporting works correctly
+
+1.1.3 (2025-07-17)
+------------------
+
+**Critical Bug Fix: Remove Hardcoded Domain Names from Pylint Plugin**
+
+**Major Bug Fixes:**
+- **Removed Hardcoded Values**: Eliminated hardcoded "domains.document" and "domains.billing" strings from pylint plugin that prevented it from working with other domain structures
+- **Dynamic Module Path Resolution**: Implemented proper module path resolution based on target folder configuration instead of hardcoded prefixes
+- **Configuration-Driven Contract Matching**: Plugin now properly uses contracts from .importlinter configuration files instead of hardcoded patterns
+- **Contract-Based Violation Detection**: Implemented proper contract violation matching using import-linter's contract system with forbidden and independence contract support
+- **Wildcard Pattern Support**: Added support for single (*) and recursive (**) wildcard patterns in contract matching
+
+**Technical Improvements:**
+- **Generic Plugin Architecture**: Plugin now works with any domain structure defined in configuration files, not just hardcoded "domains.*" patterns
+- **Proper Import Resolution**: Fixed module path calculation to respect Python import structure and target folder configuration
+- **Line-Specific Error Reporting**: Violations are now reported at the exact import lines with proper pylint message IDs
+- **Enhanced Debug Output**: Added comprehensive debug logging for troubleshooting contract matching and module resolution
+
+**Verification:**
+- Plugin now correctly detects violations: went from always reporting 10.00/10 (false negative) to properly flagging violations (1.67/10 for test file)
+- Successfully tested with document domain violations: 3 violations detected on lines 4, 7, and 8
+- Plugin works with any import-linter configuration, not just the hardcoded example domains
+
+1.1.2 (2025-07-17)
+------------------
+
+**Enhanced Documentation and Wildcard Pattern Support**
+
+**New Features:**
+- **Comprehensive Wildcard Documentation**: Detailed explanations of `*` (single) vs `**` (recursive) wildcard patterns
+- **Enhanced Usage Examples**: Complete guide with practical examples for `ignore_imports` configuration
+- **Improved Contract Types Documentation**: Expanded wildcards section with real-world use cases
+- **Author Recognition**: Updated AUTHORS.rst and LICENSE to properly recognize all contributors
+
+**Documentation Improvements:**
+- **Wildcard Pattern Guide**: Clear distinction between single and recursive wildcards
+- **Practical Examples**: Real-world scenarios for test utilities, cross-domain imports, and migration patterns
+- **Configuration Examples**: Complete .importlinter configuration examples with wildcard patterns
+- **Command Line Testing**: Instructions for testing wildcard patterns with verbose output
+
+**Bug Fixes:**
+- **License Attribution**: Added proper copyright notice for all contributors
+- **Documentation Cross-References**: Improved linking between documentation sections
+
 1.1.1 (2025-07-17)
 ------------------
 

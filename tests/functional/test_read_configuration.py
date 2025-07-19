@@ -3,9 +3,9 @@ from pathlib import Path
 import pytest
 
 import importlinter
-from importlinter import api
 import importlinter.adapters
 import importlinter.adapters.filesystem
+from importlinter import api
 
 
 @pytest.mark.parametrize(

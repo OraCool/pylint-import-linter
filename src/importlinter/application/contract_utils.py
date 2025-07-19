@@ -1,10 +1,10 @@
 import enum
 from typing import List, Optional, Sequence, Set
 
+from grimp import ImportGraph
 
 from importlinter.domain.helpers import MissingImport
-from importlinter.domain.imports import ImportExpression, DirectImport, Module
-from grimp import ImportGraph
+from importlinter.domain.imports import DirectImport, ImportExpression, Module
 
 
 class AlertLevel(enum.Enum):

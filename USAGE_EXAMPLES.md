@@ -20,6 +20,26 @@ pylint --load-plugins=importlinter.pylint_plugin \
        src/
 ```
 
+### With PYTHONPATH Configuration
+
+```bash
+# Configure PYTHONPATH for import resolution
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-pythonpath=src,lib \
+       --import-linter-config=.importlinter \
+       src/
+```
+
+### Fast Mode for Single Files
+
+```bash
+# Enable fast mode for better performance on single files
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-fast-mode=yes \
+       --import-linter-cache-dir=.cache \
+       src/myfile.py
+```
+
 ## Debug and Verbose Mode
 
 ### Full Debug Mode (Recommended for Troubleshooting)
@@ -80,6 +100,7 @@ pylint --load-plugins=importlinter.pylint_plugin \
 pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-config=.importlinter \
        --import-linter-target-folders=src/domains \
+       --import-linter-pythonpath=src \
        --import-linter-debug=yes \
        --import-linter-verbose=yes \
        --disable=all \
@@ -87,13 +108,15 @@ pylint --load-plugins=importlinter.pylint_plugin \
        src/specific_file.py
 ```
 
-### Quick File Check
+### Quick File Check with Fast Mode
 
 ```bash
-# Basic check for single file
+# Fast analysis for single file with optimizations
 pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-config=.importlinter \
        --import-linter-target-folders=src/domains \
+       --import-linter-pythonpath=src \
+       --import-linter-fast-mode=yes \
        --disable=all \
        --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
        src/specific_file.py
@@ -156,6 +179,125 @@ pylint --load-plugins=importlinter.pylint_plugin \
 # Force fresh analysis without cache
 pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-no-cache=yes \
+       src/
+```
+
+## Wildcard Patterns and ignore_imports
+
+### Understanding Wildcards
+
+Import-linter supports two types of wildcards in `ignore_imports` configuration:
+
+- **Single wildcard (`*`)**: Matches direct submodules only
+- **Recursive wildcard (`**`)**: Matches all nested submodules and subpackages
+
+### Single Wildcard Examples
+
+```ini
+# Configuration file (.importlinter)
+[importlinter:contract:test_imports]
+name = Test imports boundaries
+type = forbidden
+source_modules = 
+    document.tests.*
+forbidden_modules = 
+    document.core
+    document.api
+ignore_imports =
+    # Ignore imports from direct test submodules
+    document.tests.* -> document.core.exceptions
+```
+
+**This matches:**
+- `document.tests.unit -> document.core.exceptions` ✅
+- `document.tests.integration -> document.core.exceptions` ✅
+
+**This does NOT match:**
+- `document.tests.unit.helpers -> document.core.exceptions` ❌
+
+### Recursive Wildcard Examples
+
+```ini
+# Configuration file (.importlinter)
+[importlinter:contract:test_imports]
+name = Test imports boundaries  
+type = forbidden
+source_modules = 
+    document.tests.**
+forbidden_modules = 
+    document.core
+ignore_imports =
+    # Ignore imports from ALL test modules (nested included)
+    document.tests.** -> document.core.exceptions
+```
+
+**This matches:**
+- `document.tests.unit -> document.core.exceptions` ✅
+- `document.tests.unit.helpers -> document.core.exceptions` ✅
+- `document.tests.integration.api.endpoints -> document.core.exceptions` ✅
+
+### Bidirectional Wildcards
+
+```ini
+ignore_imports =
+    # Ignore all imports between document and contacts domains
+    document.** -> contacts.**
+    contacts.** -> document.**
+```
+
+### Complex Wildcard Patterns
+
+```ini
+ignore_imports =
+    # Specific pattern: any module -> specific utilities
+    *.utils.** -> common.logging
+    
+    # Mixed patterns: specific module -> any submodule
+    document.apps.doclib.tests.* -> contacts.models.*
+    
+    # Deep nesting: match specific paths
+    document.apps.**.tests.** -> testing.fixtures.**
+```
+
+### Practical Use Cases
+
+#### 1. Ignore Test Utilities
+
+```ini
+# Allow test files to import from test utilities
+ignore_imports =
+    tests.** -> tests.utils.**
+    tests.** -> tests.fixtures.**
+```
+
+#### 2. Allow Specific Cross-Domain Imports
+
+```ini
+# Allow specific cross-domain imports for shared utilities
+ignore_imports =
+    document.** -> shared.validators.**
+    billing.** -> shared.validators.**
+    contacts.** -> shared.validators.**
+```
+
+#### 3. Migration Period Exceptions
+
+```ini
+# Temporary exceptions during refactoring
+ignore_imports =
+    legacy.** -> new_architecture.**
+    old_module.** -> refactored_module.**
+```
+
+### Command Line Testing
+
+```bash
+# Test your wildcard patterns with verbose output
+pylint --load-plugins=importlinter.pylint_plugin \
+       --import-linter-verbose=yes \
+       --import-linter-debug=yes \
+       --disable=all \
+       --enable=import-boundary-violation,import-independence-violation,import-layer-violation,import-contract-violation,import-contract-error \
        src/
 ```
 
@@ -324,6 +466,8 @@ repos:
 | `--verbose` | `--import-linter-verbose` | Verbose output |
 | `--show-timings` | `--import-linter-show-timings` | Show timing info |
 | `--debug` | `--import-linter-debug` | Debug mode |
+| `--pythonpath` | `--import-linter-pythonpath` | PYTHONPATH entries |
+| `--fast-mode` | `--import-linter-fast-mode` | Fast mode for single files |
 
 ### Boolean Parameter Format
 
@@ -398,4 +542,83 @@ pylint --load-plugins=importlinter.pylint_plugin \
        --import-linter-show-timings=yes \
        --import-linter-no-cache=yes \
        src/
+```
+
+## CLI Usage
+
+The import-linter can also be used as a standalone CLI tool with the new `--import-linter-pythonpath` and `--import-linter-fast-mode` options.
+
+### Basic CLI Usage
+
+```bash
+# Basic contract checking
+lint-imports --config=.importlinter
+
+# With verbose output
+lint-imports --config=.importlinter --verbose
+
+# Target specific folders
+lint-imports --config=.importlinter --target-folders=src,lib
+```
+
+### PYTHONPATH Configuration
+
+```bash
+# Add single path to PYTHONPATH
+lint-imports --config=.importlinter \
+             --pythonpath=src
+
+# Add multiple paths to PYTHONPATH
+lint-imports --config=.importlinter \
+             --pythonpath=src,lib,vendor \
+             --verbose
+
+# Complex project structure
+lint-imports --config=.importlinter \
+             --pythonpath=backend/src,frontend/src,shared \
+             --target-folders=backend,frontend
+```
+
+### Fast Mode for Performance
+
+```bash
+# Enable fast mode for better performance
+lint-imports --config=.importlinter \
+             --fast-mode \
+             --pythonpath=src \
+             --target-folders=src
+
+# Fast mode with caching
+lint-imports --config=.importlinter \
+             --fast-mode \
+             --cache-dir=.import_linter_cache \
+             --pythonpath=src,lib
+
+# Fast mode for development workflow
+lint-imports --config=.importlinter \
+             --fast-mode \
+             --pythonpath=src \
+             --target-folders=src/current_feature \
+             --verbose
+```
+
+### Combined Examples
+
+```bash
+# Production analysis with all optimizations
+lint-imports --config=.importlinter \
+             --pythonpath=src,lib,vendor \
+             --fast-mode \
+             --cache-dir=.import_linter_cache \
+             --target-folders=src \
+             --show-timings \
+             --verbose
+
+# Debug mode with PYTHONPATH
+lint-imports --config=.importlinter \
+             --pythonpath=src,tests \
+             --target-folders=src \
+             --debug \
+             --verbose \
+             --no-cache
 ```

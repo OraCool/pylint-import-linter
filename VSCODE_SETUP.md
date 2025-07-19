@@ -108,13 +108,21 @@ The tasks use custom problem matchers to:
 
 ## Troubleshooting
 
+### Environment Setup
+For best results, set up PYTHONPATH before using VS Code tasks:
+```bash
+export PYTHONPATH=$PWD/src:$PWD/example:$PYTHONPATH
+```
+
 ### Common Issues
-1. **"Module not found"**: Check PYTHONPATH in settings
+1. **"Module not found"**: Ensure PYTHONPATH includes src/ and example/ directories
 2. **"Config not found"**: Verify config path in task arguments
 3. **"No violations shown"**: Check if correct folders are targeted
+4. **Module resolution errors**: Set PYTHONPATH environment variable
 
 ### Debug Steps
-1. Run "Debug Import Violations (Full Debug Mode)" task
-2. Check the terminal output for detailed error messages
-3. Verify configuration file paths and content
-4. Use the debugger to step through plugin code if needed
+1. Set PYTHONPATH: `export PYTHONPATH=$PWD/src:$PWD/example:$PYTHONPATH`
+2. Run "Debug Import Violations (Full Debug Mode)" task
+3. Check the terminal output for detailed error messages
+4. Verify configuration file paths and content
+5. Use the debugger to step through plugin code if needed

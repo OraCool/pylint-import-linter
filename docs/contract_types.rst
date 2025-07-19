@@ -337,7 +337,7 @@ Options used by multiple contracts
 
 - ``ignore_imports``: Optional list of imports, each in the form ``mypackage.foo.importer -> mypackage.bar.imported``.
   These imports will be ignored: if the import would cause a contract to be broken, adding it to the list will cause the
-  contract be kept instead. Supports :ref:`wildcards`.
+  contract be kept instead. Supports :ref:`wildcards` including both single (``*``) and recursive (``**``) patterns.
 
 - ``unmatched_ignore_imports_alerting``: The alerting level for handling expressions supplied in ``ignore_imports``
   that do not match any imports in the graph. Choices are:
@@ -351,15 +351,74 @@ Options used by multiple contracts
 Wildcards
 ---------
 
-  Many contract fields refer to sets of modules - some (but not all) of these support wildcards.
+Many contract fields refer to sets of modules - some (but not all) of these support wildcards.
 
-  ``*`` stands in for a module name, without including subpackages. ``**`` includes subpackages too.
+``*`` stands in for a module name, without including subpackages. ``**`` includes subpackages too.
 
-  Examples:
+Single Wildcard (``*``) - Direct Submodules Only
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  - ``mypackage.*``:  matches ``mypackage.foo`` but not ``mypackage.foo.bar``.
-  - ``mypackage.*.baz``: matches ``mypackage.foo.baz`` but not ``mypackage.foo.bar.baz``.
-  - ``mypackage.*.*``: matches ``mypackage.foo.bar`` and ``mypackage.foobar.baz``.
-  - ``mypackage.**``: matches ``mypackage.foo.bar`` and ``mypackage.foo.bar.baz``.
-  - ``mypackage.**.qux``: matches ``mypackage.foo.bar.qux`` and ``mypackage.foo.bar.baz.qux``.
-  - ``mypackage.foo*``: not a valid expression. (The wildcard must replace a whole module name.)
+The single wildcard ``*`` matches only direct submodules at the specified level. It does not match
+nested submodules or subpackages.
+
+Examples:
+
+- ``mypackage.*``: matches ``mypackage.foo`` but not ``mypackage.foo.bar``.
+- ``mypackage.*.baz``: matches ``mypackage.foo.baz`` but not ``mypackage.foo.bar.baz``.
+- ``mypackage.*.*``: matches ``mypackage.foo.bar`` and ``mypackage.foobar.baz``.
+
+Recursive Wildcard (``**``) - All Submodules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The recursive wildcard ``**`` matches all modules under the specified path, including nested
+submodules and subpackages. This is the most flexible option and future-proof for growing codebases.
+
+Examples:
+
+- ``mypackage.**``: matches ``mypackage.foo.bar`` and ``mypackage.foo.bar.baz``.
+- ``mypackage.**.qux``: matches ``mypackage.foo.bar.qux`` and ``mypackage.foo.bar.baz.qux``.
+
+Practical Usage with ignore_imports
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When using wildcards in ``ignore_imports``, choose the appropriate wildcard based on your needs:
+
+**Use ``*`` when you want to be specific and only match direct submodules:**
+
+.. code-block:: ini
+
+    ignore_imports =
+        document.apps.doclib.tests.* -> contacts
+
+This matches imports from direct submodules like:
+- ``document.apps.doclib.tests.unit -> contacts``
+- ``document.apps.doclib.tests.integration -> contacts``
+
+But does NOT match deeper nested modules like:
+- ``document.apps.doclib.tests.unit.helpers -> contacts``
+
+**Use ``**`` when you want to match all modules within a package hierarchy:**
+
+.. code-block:: ini
+
+    ignore_imports =
+        document.apps.doclib.tests.** -> contacts
+
+This matches imports from ALL modules under tests, including:
+- ``document.apps.doclib.tests.unit -> contacts``
+- ``document.apps.doclib.tests.integration.helpers -> contacts``  
+- ``document.apps.doclib.tests.functional.api.endpoints -> contacts``
+
+**Bidirectional wildcards:**
+
+.. code-block:: ini
+
+    ignore_imports =
+        document.** -> contacts.**
+
+This ignores imports from any module under ``document`` to any module under ``contacts``.
+
+Invalid Patterns
+~~~~~~~~~~~~~~~~~
+
+- ``mypackage.foo*``: not a valid expression. (The wildcard must replace a whole module name.)

@@ -5,7 +5,7 @@ import sys
 import os
 
 # Add src to path so we can import directly
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from importlinter.cli import lint_imports_command
 
@@ -20,6 +20,6 @@ if __name__ == "__main__":
         exclude_folders=None,
         debug=True,
         show_timings=False,
-        verbose=True
+        verbose=True,
     )
     print(f"CLI function result: {result}")

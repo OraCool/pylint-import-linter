@@ -32,9 +32,7 @@ class UserService(BaseService):
 
         user = User(user_id=f"user_{hash(email)}", email=email, name=name)
 
-        self.email_client.send_email(
-            to=email, subject="Welcome!", body=f"Welcome {name}!"
-        )
+        self.email_client.send_email(to=email, subject="Welcome!", body=f"Welcome {name}!")
 
         return user
 

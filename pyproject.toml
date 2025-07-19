@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pylint-import-linter"
-version = "1.1.1"
+version = "1.1.7"
 license = "BSD-2-Clause"
 description = "Enforces rules for the imports within and between Python packages."
 authors = [
@@ -43,7 +43,7 @@ Documentation = "https://import-linter.readthedocs.io/"
 Source-code = "https://github.com/seddonym/import-linter/"
 
 [project.scripts]
-lint-imports = "importlinter.cli:lint_imports_command"
+lint-imports = "importlinter.cli:main"
 
 [project.entry-points.pylint]
 import-linter = "importlinter.pylint_plugin"
@@ -85,9 +85,16 @@ ignore_missing_imports = true
 
 [tool.uv]
 dev-dependencies = [
-    "pytest>=7.0.0",
-    "black>=22.0.0",
-    "mypy>=1.0.0",
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "mypy>=1.8.0",
     "pyyaml>=6.0.2",
     "build>=1.2.2.post1",
+    "pylint-import-linter",
+    "flake8>=7.0.0",
+    "pytest-cov>=6.2.1",
+    "tox>=4.27.0",
 ]
+
+[tool.uv.sources]
+pylint-import-linter = { workspace = true }

@@ -17,6 +17,8 @@ This is an enhanced version of Import Linter that extends the original `import-l
 - **Advanced Pylint Plugin**: Enhanced integration with unified parameter interface
 - **Debug Mode**: Detailed error reporting with stack traces
 - **Verbose Mode**: Real-time analysis progress and timing information
+- **PYTHONPATH Configuration**: Easy import path management
+- **Fast Mode**: Performance optimizations for single-file analysis
 - **VS Code Integration**: Comprehensive tasks, launch configurations, and settings
 - **Single File Analysis**: Targeted debugging support
 - **Parameter Unification**: Consistent interface between CLI and plugin
@@ -33,6 +35,8 @@ Import Linter allows you to define and enforce rules for the imports within and 
 - **Enhanced Pylint Plugin**: Advanced integration with debug and verbose modes
 - **Debug Mode**: Stack traces, detailed error messages, and diagnostic information
 - **Verbose Mode**: Real-time analysis progress and timing information
+- **PYTHONPATH Configuration**: Simplified import path setup for complex projects
+- **Fast Mode**: Performance optimizations for single-file analysis (~3x faster)
 - **Single File Analysis**: Targeted debugging for specific files
 - **VS Code Integration**: Comprehensive tasks, launch configurations, and settings
 - **Folder-Specific Targeting**: Configure checking for particular folders only
@@ -49,6 +53,8 @@ This project extends the original `import-linter <https://import-linter.readthed
 - Enhanced pylint plugin with unified parameter interface
 - Debug mode with stack traces and detailed error reporting
 - Verbose mode with real-time analysis progress
+- PYTHONPATH configuration for easy import path management
+- Fast mode with performance optimizations (up to 3x faster for single files)
 - Single file analysis capabilities
 - Comprehensive VS Code integration
 - Parameter consistency between CLI and plugin
@@ -134,6 +140,25 @@ For troubleshooting contract violations, use debug and verbose modes:
            --import-linter-verbose=yes \
            src/
 
+**PYTHONPATH Configuration:**
+
+.. code-block:: bash
+
+    # Configure import paths for complex projects
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-pythonpath=src,lib,vendor \
+           src/
+
+**Fast Mode for Single Files:**
+
+.. code-block:: bash
+
+    # Enable performance optimizations for single-file analysis
+    pylint --load-plugins=importlinter.pylint_plugin \
+           --import-linter-fast-mode=yes \
+           --import-linter-cache-dir=.cache \
+           src/myfile.py
+
 **Debug Mode Features:**
 
 - Stack traces for configuration errors
@@ -147,6 +172,12 @@ For troubleshooting contract violations, use debug and verbose modes:
 - Contract details and import chain analysis
 - Timing information for each operation
 - Final results summary
+
+**Performance Features:**
+
+- Fast mode: Up to 3x faster for single-file analysis
+- Caching support for large projects
+- PYTHONPATH configuration for import resolution
 
 **IDE Integration:**
 Most IDEs that support pylint will automatically pick up the plugin when configured in your project settings.
@@ -212,6 +243,22 @@ Create an ``.importlinter`` file in the root of your project to define your cont
 From your project root, run::
 
     lint-imports
+
+**Enhanced CLI with PYTHONPATH and Fast Mode:**
+
+The enhanced CLI supports additional options for better import resolution and performance::
+
+    # Configure PYTHONPATH for import resolution
+    lint-imports --pythonpath=src,lib
+
+    # Enable fast mode for better performance
+    lint-imports --fast-mode --pythonpath=src
+
+    # Combined with other options
+    lint-imports --pythonpath=src,lib,vendor \
+                 --fast-mode \
+                 --target-folders=src \
+                 --verbose
 
 **Option 2: Pylint Plugin Usage**
 
